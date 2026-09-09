@@ -5,3 +5,6 @@ access_stock_count_line_user,stock.count.line user,model_stock_count_line,group_
 access_stock_count_line_manager,stock.count.line manager,model_stock_count_line,group_stock_count_manager,1,1,1,1
 access_stock_count_reason_user,stock.count.reason user,model_stock_count_reason,group_stock_count_user,1,0,0,0
 access_stock_count_reason_manager,stock.count.reason manager,model_stock_count_reason,stock.group_stock_manager,1,1,1,1
+access_stock_count_assign_manager,stock.count.assign manager,model_stock_count_assign,group_stock_count_manager,1,1,1,1
+access_stock_count_add_product_user,stock.count.add.product user,model_stock_count_add_product,group_stock_count_user,1,1,1,1
+access_stock_lot_counter,stock.lot counter,stock.model_stock_lot,group_stock_count_user,1,0,0,0

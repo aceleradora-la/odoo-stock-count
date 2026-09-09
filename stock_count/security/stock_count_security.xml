@@ -18,8 +18,8 @@
             <field name="name">Supervisor</field>
             <field name="sequence">20</field>
             <field name="privilege_id" ref="res_groups_privilege_stock_count"/>
-            <field name="implied_ids" eval="[(4, ref('group_stock_count_user'))]"/>
-            <field name="comment">Crea, confirma, revisa, aprueba y aplica recuentos.</field>
+            <field name="implied_ids" eval="[(4, ref('group_stock_count_user')), (4, ref('stock.group_stock_user'))]"/>
+            <field name="comment">Crea, confirma, revisa, aprueba y aplica recuentos. Incluye Inventario / Usuario para poder generar los ajustes.</field>
         </record>
 
         <record id="stock.group_stock_manager" model="res.groups">
@@ -69,6 +69,21 @@
         <record id="stock_count_line_rule_manager" model="ir.rule">
             <field name="name">Línea de recuento: el supervisor ve todas</field>
             <field name="model_id" ref="model_stock_count_line"/>
+            <field name="groups" eval="[(4, ref('group_stock_count_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <!-- Conteo ciego: el contador tampoco ve, en la pantalla de quants, los quants
+             tomados por un recuento ciego (ahí está la cantidad a mano). -->
+        <record id="stock_quant_rule_counter_blind" model="ir.rule">
+            <field name="name">Quants: en conteo ciego el contador no ve los quants tomados</field>
+            <field name="model_id" ref="stock.model_stock_quant"/>
+            <field name="groups" eval="[(4, ref('group_stock_count_user'))]"/>
+            <field name="domain_force">['|', ('count_line_id', '=', False), ('count_line_id.count_id.blind', '=', False)]</field>
+        </record>
+        <record id="stock_quant_rule_manager" model="ir.rule">
+            <field name="name">Quants: el supervisor de recuentos ve todos</field>
+            <field name="model_id" ref="stock.model_stock_quant"/>
             <field name="groups" eval="[(4, ref('group_stock_count_manager'))]"/>
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>

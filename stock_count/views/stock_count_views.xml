@@ -6,8 +6,17 @@
         <field name="arch" type="xml">
             <form string="Recuento">
                 <header>
-                    <!-- Los botones de transición (Confirmar, Iniciar conteo, Enviar a revisión,
-                         Aplicar, Cancelar) se agregan en la fase 1 junto con la lógica. -->
+                    <button name="action_confirm" type="object" string="Confirmar" class="btn-primary" invisible="state != 'draft'" groups="stock_count.group_stock_count_manager"/>
+                    <button name="action_start" type="object" string="Iniciar conteo" class="btn-primary" invisible="state != 'ready'" groups="stock_count.group_stock_count_manager"/>
+                    <button name="action_to_review" type="object" string="Enviar a revisión" class="btn-primary" invisible="state != 'counting'" groups="stock_count.group_stock_count_manager"/>
+                    <button name="action_apply" type="object" string="Aplicar" class="btn-primary" invisible="state != 'review' or moved_count > 0" groups="stock_count.group_stock_count_manager" confirm="Se van a generar los ajustes de inventario con las cantidades contadas. Esta acción no se puede deshacer. ¿Continuar?"/>
+                    <button name="action_apply_force" type="object" string="Aplicar igualmente" class="btn-warning" invisible="state != 'review' or moved_count == 0" groups="stock_count.group_stock_count_manager" confirm="Hay líneas cuyo stock se movió después del snapshot. Se tomará la cantidad contada como cantidad final. ¿Continuar?"/>
+                    <button name="action_approve_within_tolerance" type="object" string="Aprobar dentro de tolerancia" invisible="state != 'review'" groups="stock_count.group_stock_count_manager"/>
+                    <button name="action_approve_all" type="object" string="Aprobar todas las contadas" invisible="state != 'review'" groups="stock_count.group_stock_count_manager"/>
+                    <button name="%(stock_count.action_stock_count_assign)d" type="action" string="Repartir líneas" invisible="state not in ('ready', 'counting', 'review')" groups="stock_count.group_stock_count_manager" context="{'default_count_id': id}"/>
+                    <button name="%(stock_count.action_stock_count_add_product)d" type="action" string="Producto no esperado" invisible="state not in ('ready', 'counting', 'review')" context="{'default_count_id': id}"/>
+                    <button name="action_draft" type="object" string="Volver a borrador" invisible="state not in ('ready', 'cancel')" groups="stock_count.group_stock_count_manager"/>
+                    <button name="action_cancel" type="object" string="Cancelar" invisible="state in ('done', 'cancel')" groups="stock_count.group_stock_count_manager" confirm="Se libera el bloqueo y el recuento queda cancelado sin generar ajustes. ¿Continuar?"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,ready,counting,review,done"/>
                 </header>
                 <sheet>
@@ -50,7 +59,9 @@
                         <group>
                             <field name="progress" widget="progressbar"/>
                             <field name="counted_count" string="Contadas"/>
+                            <field name="pending_count" string="Pendientes"/>
                             <field name="line_count" string="Líneas"/>
+                            <field name="moved_count" string="Movidas durante el conteo" invisible="moved_count == 0"/>
                         </group>
                         <group>
                             <field name="diff_count" string="Con diferencia" invisible="blind and not is_manager"/>
@@ -60,7 +71,7 @@
                     </group>
                     <notebook>
                         <page name="lines" string="Líneas">
-                            <field name="line_ids" context="{'default_count_id': id}">
+                            <field name="line_ids" context="{'default_count_id': id}" readonly="state in ('done', 'cancel')">
                                 <list editable="bottom" decoration-muted="state == 'skipped'" decoration-warning="state == 'recount'" decoration-success="state in ('approved', 'applied')">
                                     <field name="location_id"/>
                                     <field name="product_id"/>
@@ -77,6 +88,10 @@
                                     <field name="reason_id" optional="show"/>
                                     <field name="moved_during_count" optional="hide"/>
                                     <field name="state" widget="badge" decoration-info="state == 'counted'" decoration-warning="state == 'recount'" decoration-success="state in ('approved', 'applied')"/>
+                                    <button name="action_approve" type="object" icon="fa-check" title="Aprobar" invisible="state != 'counted' or not parent.is_manager or parent.state != 'review'"/>
+                                    <button name="action_request_recount" type="object" icon="fa-refresh" title="Pedir reconteo" invisible="state not in ('counted', 'approved') or not parent.is_manager or parent.state not in ('counting', 'review')"/>
+                                    <button name="action_skip" type="object" icon="fa-ban" title="Omitir" invisible="state in ('applied', 'skipped') or not parent.is_manager or parent.state not in ('ready', 'counting', 'review')"/>
+                                    <button name="action_reset_pending" type="object" icon="fa-undo" title="Volver a pendiente" invisible="state != 'skipped' or not parent.is_manager or parent.state not in ('ready', 'counting', 'review')"/>
                                     <field name="blind" column_invisible="1"/>
                                     <field name="company_id" column_invisible="1"/>
                                     <field name="currency_id" column_invisible="1"/>
