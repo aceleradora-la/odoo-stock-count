@@ -215,6 +215,25 @@ class StockCount(models.Model):
             count.move_count = len(count.move_ids)
 
     # ------------------------------------------------------------------
+    # Conteo ciego: los totales de diferencia tampoco se ven
+    # ------------------------------------------------------------------
+    def _read_format(self, fnames, load="_classic_read"):
+        result = super()._read_format(fnames, load)
+        blind_fields = ("diff_count", "diff_value", "accuracy")
+        if (
+            not self.env.su
+            and any(name in blind_fields for name in fnames)
+            and not self.env.user.has_group("stock_count.group_stock_count_manager")
+        ):
+            blind_ids = set(self.sudo().filtered("blind").ids)
+            for vals in result:
+                if vals.get("id") in blind_ids:
+                    for name in blind_fields:
+                        if name in vals:
+                            vals[name] = 0
+        return result
+
+    # ------------------------------------------------------------------
     # ORM
     # ------------------------------------------------------------------
     @api.model_create_multi

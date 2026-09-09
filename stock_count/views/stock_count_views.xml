@@ -13,6 +13,8 @@
                     <button name="action_apply_force" type="object" string="Aplicar igualmente" class="btn-warning" invisible="state != 'review' or moved_count == 0" groups="stock_count.group_stock_count_manager" confirm="Hay líneas cuyo stock se movió después del snapshot. Se tomará la cantidad contada como cantidad final. ¿Continuar?"/>
                     <button name="action_approve_within_tolerance" type="object" string="Aprobar dentro de tolerancia" invisible="state != 'review'" groups="stock_count.group_stock_count_manager"/>
                     <button name="action_approve_all" type="object" string="Aprobar todas las contadas" invisible="state != 'review'" groups="stock_count.group_stock_count_manager"/>
+                    <button name="%(stock_count.action_stock_count_assign)d" type="action" string="Repartir líneas" invisible="state not in ('ready', 'counting', 'review')" groups="stock_count.group_stock_count_manager" context="{'default_count_id': id}"/>
+                    <button name="%(stock_count.action_stock_count_add_product)d" type="action" string="Producto no esperado" invisible="state not in ('ready', 'counting', 'review')" context="{'default_count_id': id}"/>
                     <button name="action_draft" type="object" string="Volver a borrador" invisible="state not in ('ready', 'cancel')" groups="stock_count.group_stock_count_manager"/>
                     <button name="action_cancel" type="object" string="Cancelar" invisible="state in ('done', 'cancel')" groups="stock_count.group_stock_count_manager" confirm="Se libera el bloqueo y el recuento queda cancelado sin generar ajustes. ¿Continuar?"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,ready,counting,review,done"/>

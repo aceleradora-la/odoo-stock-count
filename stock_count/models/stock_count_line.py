@@ -1,5 +1,5 @@
 from odoo import api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 from odoo.tools import float_compare, float_is_zero
 
 LINE_STATES = [
@@ -10,6 +10,18 @@ LINE_STATES = [
     ("applied", "Aplicada"),
     ("skipped", "Omitida"),
 ]
+
+# Campos que un contador no puede ver en conteo ciego. Se anulan en el ORM, no solo
+# en la vista, así tampoco salen por export, RPC, agrupaciones ni filtros.
+BLIND_FIELDS = ("qty_theoretical", "qty_current", "qty_diff", "diff_pct", "diff_value")
+# Lo único que un contador puede escribir en una línea.
+COUNTER_WRITABLE_FIELDS = {"qty_counted", "qty_recount", "note", "reason_id"}
+
+
+def _domain_field_names(domain):
+    for leaf in domain or ():
+        if isinstance(leaf, (list, tuple)) and len(leaf) == 3 and isinstance(leaf[0], str):
+            yield leaf[0].split(".")[0]
 
 
 class StockCountLine(models.Model):
@@ -199,6 +211,16 @@ class StockCountLine(models.Model):
                 )
 
     def write(self, vals):
+        if self._is_blind_user():
+            forbidden = set(vals) - COUNTER_WRITABLE_FIELDS
+            if forbidden:
+                raise AccessError(
+                    self.env._(
+                        "Un contador solo puede cargar cantidades, motivo y comentario "
+                        "(campos no permitidos: %s).",
+                        ", ".join(sorted(forbidden)),
+                    )
+                )
         counting = "qty_counted" in vals or "qty_recount" in vals
         if counting and not self.env.context.get("stock_count_skip_checks"):
             self._check_can_count()
@@ -217,6 +239,142 @@ class StockCountLine(models.Model):
                     {"recounted_by_id": uid, "recounted_at": now, "state": "counted"}
                 )
         return res
+
+    # ------------------------------------------------------------------
+    # Conteo ciego forzado por el ORM
+    # ------------------------------------------------------------------
+    def _is_blind_user(self):
+        """Usuario que no es supervisor ni superusuario: se le aplican las restricciones."""
+        return not self.env.su and not self.env.user.has_group(
+            "stock_count.group_stock_count_manager"
+        )
+
+    def _blind_company_active(self):
+        return self._is_blind_user() and any(
+            company.stock_count_blind for company in self.env.companies
+        )
+
+    def _read_format(self, fnames, load="_classic_read"):
+        result = super()._read_format(fnames, load)
+        if self._is_blind_user() and any(name in BLIND_FIELDS for name in fnames):
+            blind_ids = set(self.sudo().filtered("blind").ids)
+            if blind_ids:
+                for vals in result:
+                    if vals.get("id") in blind_ids:
+                        for name in BLIND_FIELDS:
+                            if name in vals:
+                                vals[name] = 0.0
+        return result
+
+    def _export_rows(self, fields, *, _is_toplevel_call=True):
+        if self._is_blind_user() and any(path and path[0] in BLIND_FIELDS for path in fields):
+            if self.sudo().filtered("blind"):
+                raise AccessError(
+                    self.env._("En conteo ciego no se pueden exportar las cantidades teóricas.")
+                )
+        return super()._export_rows(fields, _is_toplevel_call=_is_toplevel_call)
+
+    def _read_group(self, domain, groupby=(), aggregates=(), having=(), *args, **kwargs):
+        if self._blind_company_active():
+            used = [spec.split(":")[0] for spec in aggregates] + [
+                spec.split(":")[0] for spec in groupby
+            ]
+            if any(name in BLIND_FIELDS for name in used):
+                raise AccessError(
+                    self.env._(
+                        "En conteo ciego no se puede agrupar ni sumar por teórico o diferencia."
+                    )
+                )
+        return super()._read_group(domain, groupby, aggregates, having, *args, **kwargs)
+
+    def _search(self, domain, *args, **kwargs):
+        if self._blind_company_active() and any(
+            name in BLIND_FIELDS for name in _domain_field_names(domain)
+        ):
+            raise AccessError(
+                self.env._("En conteo ciego no se puede filtrar por teórico o diferencia.")
+            )
+        return super()._search(domain, *args, **kwargs)
+
+    # ------------------------------------------------------------------
+    # Vista móvil del contador
+    # ------------------------------------------------------------------
+    @api.model
+    def _counter_domain(self, count_id=False):
+        user = self.env.user
+        domain = [
+            ("count_state", "in", ("counting", "review")),
+            ("state", "in", ("pending", "recount", "counted")),
+            "|",
+            "|",
+            ("assigned_user_id", "=", user.id),
+            "&",
+            ("assigned_user_id", "=", False),
+            ("count_id.counter_ids", "in", [user.id]),
+            ("count_id.user_id", "=", user.id),
+        ]
+        if count_id:
+            domain.append(("count_id", "=", count_id))
+        return domain
+
+    def _counter_line_data(self):
+        self.ensure_one()
+        return {
+            "id": self.id,
+            "count_id": self.count_id.id,
+            "count_name": self.count_id.name,
+            "location_id": self.location_id.id,
+            "location_name": self.location_id.complete_name,
+            "location_barcode": self.location_id.barcode or "",
+            "product_id": self.product_id.id,
+            "product_name": self.product_id.display_name,
+            "product_code": self.product_id.default_code or "",
+            "product_barcode": self.product_id.barcode or "",
+            "lot_id": self.lot_id.id,
+            "lot_name": self.lot_id.name or "",
+            "uom_name": self.product_uom_id.name,
+            "state": self.state,
+            "is_recount": self.state == "recount",
+            "done": self.state == "counted",
+            "quantity": self.qty_recount if self.state == "recount" else self.qty_counted,
+            "note": self.note or "",
+        }
+
+    @api.model
+    def counter_get_data(self, count_id=False):
+        """Datos para la vista móvil: recuentos activos del usuario y sus líneas a contar."""
+        user = self.env.user
+        counts = self.env["stock.count"].search(
+            [
+                ("state", "in", ("counting", "review")),
+                "|",
+                ("counter_ids", "in", [user.id]),
+                ("user_id", "=", user.id),
+            ],
+            order="date_planned desc, id desc",
+        )
+        lines = self.search(self._counter_domain(count_id))
+        # La búsqueda respeta las reglas del usuario; los nombres relacionados (lote,
+        # ubicación) se leen con sudo porque el contador no tiene acceso a esos modelos.
+        return {
+            "counts": [
+                {"id": count.id, "name": count.name, "state": count.state, "blind": count.blind}
+                for count in counts
+            ],
+            "lines": [line.sudo()._counter_line_data() for line in lines],
+        }
+
+    def counter_set_quantity(self, quantity):
+        """Carga primer o segundo conteo según el estado de la línea."""
+        self.ensure_one()
+        field = "qty_recount" if self.state == "recount" else "qty_counted"
+        self.write({field: quantity})
+        return self.sudo()._counter_line_data()
+
+    def counter_add_quantity(self, delta=1.0):
+        self.ensure_one()
+        current = self.qty_recount if self.state == "recount" else self.qty_counted
+        return self.counter_set_quantity(current + delta)
 
     # ------------------------------------------------------------------
     # Acciones del supervisor

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_count_assign_view_form" model="ir.ui.view">
+        <field name="name">stock.count.assign.form</field>
+        <field name="model">stock.count.assign</field>
+        <field name="arch" type="xml">
+            <form string="Repartir líneas">
+                <group>
+                    <field name="count_id" invisible="1"/>
+                    <field name="user_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="mode" widget="radio"/>
+                    <field name="only_unassigned"/>
+                    <field name="line_count" string="Líneas a repartir"/>
+                </group>
+                <footer>
+                    <button name="action_assign" type="object" string="Repartir" class="btn-primary" data-hotkey="q"/>
+                    <button string="Cancelar" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_stock_count_assign" model="ir.actions.act_window">
+        <field name="name">Repartir líneas</field>
+        <field name="res_model">stock.count.assign</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_stock_count"/>
+        <field name="binding_view_types">form</field>
+    </record>
+</odoo>

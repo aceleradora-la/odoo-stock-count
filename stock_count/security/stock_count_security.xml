@@ -70,5 +70,20 @@
             <field name="groups" eval="[(4, ref('group_stock_count_manager'))]"/>
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
+
+        <!-- Conteo ciego: el contador tampoco ve, en la pantalla de quants, los quants
+             tomados por un recuento ciego (ahí está la cantidad a mano). -->
+        <record id="stock_quant_rule_counter_blind" model="ir.rule">
+            <field name="name">Quants: en conteo ciego el contador no ve los quants tomados</field>
+            <field name="model_id" ref="stock.model_stock_quant"/>
+            <field name="groups" eval="[(4, ref('group_stock_count_user'))]"/>
+            <field name="domain_force">['|', ('count_line_id', '=', False), ('count_line_id.count_id.blind', '=', False)]</field>
+        </record>
+        <record id="stock_quant_rule_manager" model="ir.rule">
+            <field name="name">Quants: el supervisor de recuentos ve todos</field>
+            <field name="model_id" ref="stock.model_stock_quant"/>
+            <field name="groups" eval="[(4, ref('group_stock_count_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
     </data>
 </odoo>
