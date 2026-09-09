@@ -15,8 +15,7 @@ class TestStockCount(TransactionCase):
         cls.product = cls.env["product.product"].create(
             {
                 "name": "Tornillo M8 x 50",
-                "type": "consu",
-                "is_storable": True,
+                "detailed_type": "product",
                 "standard_price": 35.0,
             }
         )

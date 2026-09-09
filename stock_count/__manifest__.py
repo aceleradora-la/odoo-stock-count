@@ -2,7 +2,7 @@
     "name": "Recuento de inventario",
     "summary": "Recuento físico como transacción: snapshot, bloqueo de movimientos, "
     "contadores, reconteo y trazabilidad de los ajustes",
-    "version": "18.0.0.1.0",
+    "version": "17.0.0.1.0",
     "category": "Inventory/Inventory",
     "author": "aceleradora.la",
     "website": "https://github.com/aceleradora-la/odoo-stock-count",

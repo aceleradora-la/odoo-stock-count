@@ -4,7 +4,7 @@
         <field name="name">stock.count.line.list</field>
         <field name="model">stock.count.line</field>
         <field name="arch" type="xml">
-            <list editable="bottom" create="0" delete="0" decoration-muted="state == 'skipped'" decoration-warning="state == 'recount'" decoration-success="state in ('approved', 'applied')">
+            <tree editable="bottom" create="0" delete="0" decoration-muted="state == 'skipped'" decoration-warning="state == 'recount'" decoration-success="state in ('approved', 'applied')">
                 <field name="count_id" readonly="1"/>
                 <field name="location_id" readonly="1"/>
                 <field name="product_id" readonly="1"/>
@@ -26,7 +26,7 @@
                 <field name="is_manager" column_invisible="1"/>
                 <field name="company_id" column_invisible="1"/>
                 <field name="currency_id" column_invisible="1"/>
-            </list>
+            </tree>
         </field>
     </record>
 
@@ -58,7 +58,7 @@
     <record id="stock_count_line_action_mine" model="ir.actions.act_window">
         <field name="name">Mis líneas de conteo</field>
         <field name="res_model">stock.count.line</field>
-        <field name="view_mode">list</field>
+        <field name="view_mode">tree</field>
         <field name="search_view_id" ref="stock_count_line_view_search"/>
         <field name="context">{'search_default_mine': 1, 'search_default_pending': 1, 'search_default_active_counts': 1, 'search_default_group_location': 1}</field>
         <field name="help" type="html">

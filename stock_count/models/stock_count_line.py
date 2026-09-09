@@ -34,7 +34,7 @@ class StockCountLine(models.Model):
         "product.product",
         required=True,
         check_company=True,
-        domain="[('type', '=', 'consu'), ('is_storable', '=', True)]",
+        domain="[('type', '=', 'product')]",
     )
     product_uom_id = fields.Many2one(related="product_id.uom_id", string="UdM")
     location_id = fields.Many2one(

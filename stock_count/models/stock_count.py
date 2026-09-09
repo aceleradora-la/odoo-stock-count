@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import float_is_zero
 
@@ -71,7 +71,7 @@ class StockCount(models.Model):
         "product_id",
         string="Productos",
         check_company=True,
-        domain="[('type', '=', 'consu'), ('is_storable', '=', True)]",
+        domain="[('type', '=', 'product')]",
     )
     categ_id = fields.Many2one("product.category", string="Categoría")
     lot_ids = fields.Many2many(
@@ -229,9 +229,7 @@ class StockCount(models.Model):
 
     def unlink(self):
         if any(count.state not in ("draft", "cancel") for count in self):
-            raise UserError(
-                self.env._("Solo se pueden eliminar recuentos en borrador o cancelados.")
-            )
+            raise UserError(_("Solo se pueden eliminar recuentos en borrador o cancelados."))
         return super().unlink()
 
     # ------------------------------------------------------------------
