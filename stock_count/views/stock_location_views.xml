@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_location_form_stock_count" model="ir.ui.view">
+        <field name="name">stock.location.form.stock_count</field>
+        <field name="model">stock.location</field>
+        <field name="inherit_id" ref="stock.view_location_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='additional_info']" position="after">
+                <group string="Recuentos" name="stock_count" invisible="usage != 'internal'">
+                    <field name="stock_count_count"/>
+                    <field name="stock_count_last_date"/>
+                    <field name="stock_count_accuracy" widget="progressbar"/>
+                    <button name="action_view_stock_counts" type="object" string="Ver recuentos" class="btn-link" icon="fa-list" invisible="stock_count_count == 0"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>
