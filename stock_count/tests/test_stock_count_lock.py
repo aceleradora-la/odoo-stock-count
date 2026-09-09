@@ -65,25 +65,23 @@ class TestStockCountLock(TransactionCase):
         return self.Count.create(base)
 
     def _picking(self, product, qty, src, dst, picking_type, lot=None):
+        move_vals = {
+            "product_id": product.id,
+            "product_uom_qty": qty,
+            "product_uom": product.uom_id.id,
+            "location_id": src.id,
+            "location_dest_id": dst.id,
+        }
+        if (
+            "name" in self.env["stock.move"]._fields
+        ):  # hasta 18.0 es obligatorio; en 19.0 no existe
+            move_vals["name"] = product.display_name
         picking = self.env["stock.picking"].create(
             {
                 "picking_type_id": picking_type.id,
                 "location_id": src.id,
                 "location_dest_id": dst.id,
-                "move_ids": [
-                    (
-                        0,
-                        0,
-                        {
-                            "name": product.display_name,
-                            "product_id": product.id,
-                            "product_uom_qty": qty,
-                            "product_uom": product.uom_id.id,
-                            "location_id": src.id,
-                            "location_dest_id": dst.id,
-                        },
-                    )
-                ],
+                "move_ids": [(0, 0, move_vals)],
             }
         )
         picking.action_confirm()
