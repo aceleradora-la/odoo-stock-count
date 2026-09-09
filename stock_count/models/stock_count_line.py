@@ -45,7 +45,7 @@ class StockCountLine(models.Model):
         index=True,
     )
     lot_id = fields.Many2one("stock.lot", string="Lote", check_company=True, index=True)
-    package_id = fields.Many2one("stock.quant.package", string="Paquete")
+    package_id = fields.Many2one("stock.package", string="Paquete")
     owner_id = fields.Many2one("res.partner", string="Propietario")
     quant_id = fields.Many2one("stock.quant", string="Quant", readonly=True, copy=False)
 

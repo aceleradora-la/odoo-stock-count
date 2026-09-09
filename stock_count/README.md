@@ -28,6 +28,7 @@ Verificado sobre `odoo/odoo` rama 19.0 (`addons/stock/models/stock_quant.py`):
   parámetros.
 - El contexto `inventory_name` en 17.0 y 18.0 pone el `name` del movimiento; en 19.0 lo
   guarda en el campo nuevo `inventory_name` del `stock.move`.
+- El modelo de paquetes pasó de `stock.quant.package` a `stock.package`.
 - `action_apply_inventory` abre el asistente `stock.inventory.conflict` si el quant está
   `is_outdated`. Nuestro flujo llama a `_apply_inventory` directamente y resuelve el
   conflicto con la lógica propia de "movido durante el conteo".
