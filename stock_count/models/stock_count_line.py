@@ -293,7 +293,11 @@ class StockCountLine(models.Model):
         self.ensure_one()
         if self.state != "approved":
             return
-        if self._is_diff_zero():
+        # La cantidad contada es absoluta: se compara con lo que hay HOY en el quant, no
+        # con el snapshot. Así, si el stock se movió y el supervisor decidió aplicar
+        # igualmente, el ajuste deja el quant en la cantidad contada.
+        current = self.quant_id.quantity if self.quant_id else 0.0
+        if float_compare(current, self.qty_final, precision_rounding=self._rounding()) == 0:
             self.write({"state": "applied"})
             return
         quant = self._get_or_create_quant()
