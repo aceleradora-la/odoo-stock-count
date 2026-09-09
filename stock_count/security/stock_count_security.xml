@@ -16,8 +16,8 @@
         <record id="group_stock_count_manager" model="res.groups">
             <field name="name">Supervisor</field>
             <field name="category_id" ref="module_category_stock_count"/>
-            <field name="implied_ids" eval="[(4, ref('group_stock_count_user'))]"/>
-            <field name="comment">Crea, confirma, revisa, aprueba y aplica recuentos.</field>
+            <field name="implied_ids" eval="[(4, ref('group_stock_count_user')), (4, ref('stock.group_stock_user'))]"/>
+            <field name="comment">Crea, confirma, revisa, aprueba y aplica recuentos. Incluye Inventario / Usuario para poder generar los ajustes.</field>
         </record>
 
         <record id="stock.group_stock_manager" model="res.groups">

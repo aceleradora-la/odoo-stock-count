@@ -1,4 +1,6 @@
 from odoo import api, fields, models
+from odoo.exceptions import UserError
+from odoo.tools import float_compare, float_is_zero
 
 LINE_STATES = [
     ("pending", "Pendiente"),
@@ -105,6 +107,9 @@ class StockCountLine(models.Model):
         "stock.move.line", "count_line_id", string="Ajuste generado", readonly=True
     )
 
+    # ------------------------------------------------------------------
+    # Cómputos
+    # ------------------------------------------------------------------
     def _compute_is_manager(self):
         is_manager = self.env.user.has_group("stock_count.group_stock_count_manager")
         for line in self:
@@ -132,3 +137,173 @@ class StockCountLine(models.Model):
             line.qty_diff = diff
             line.diff_pct = 100.0 * diff / line.qty_theoretical if line.qty_theoretical else 0.0
             line.diff_value = diff * line.product_id.with_company(line.company_id).standard_price
+
+    def _rounding(self):
+        self.ensure_one()
+        return self.product_uom_id.rounding or 0.01
+
+    def _is_diff_zero(self):
+        self.ensure_one()
+        return float_is_zero(self.qty_diff, precision_rounding=self._rounding())
+
+    def _quant_moved_since_snapshot(self):
+        self.ensure_one()
+        current = self.quant_id.quantity if self.quant_id else 0.0
+        return (
+            float_compare(current, self.qty_theoretical, precision_rounding=self._rounding()) != 0
+        )
+
+    # ------------------------------------------------------------------
+    # ORM: cargar un conteo registra quién y cuándo, y avanza el estado
+    # ------------------------------------------------------------------
+    def _check_can_count(self):
+        is_manager = self.env.user.has_group("stock_count.group_stock_count_manager")
+        for line in self:
+            if line.count_state not in ("ready", "counting", "review"):
+                raise UserError(
+                    self.env._(
+                        "El recuento %s no está activo; no se pueden cargar cantidades.",
+                        line.count_id.name,
+                    )
+                )
+            if line.state in ("approved", "applied"):
+                raise UserError(
+                    self.env._(
+                        "La línea de %s ya está aprobada. Pedí un reconteo para recontarla.",
+                        line.product_id.display_name,
+                    )
+                )
+            if not is_manager and line.assigned_user_id and line.assigned_user_id != self.env.user:
+                raise UserError(
+                    self.env._(
+                        "La línea de %(product)s está asignada a %(user)s.",
+                        product=line.product_id.display_name,
+                        user=line.assigned_user_id.name,
+                    )
+                )
+
+    def write(self, vals):
+        counting = "qty_counted" in vals or "qty_recount" in vals
+        if counting and not self.env.context.get("stock_count_skip_checks"):
+            self._check_can_count()
+        res = super().write(vals)
+        if counting:
+            now = fields.Datetime.now()
+            uid = self.env.user.id
+            if "qty_counted" in vals:
+                first = self.filtered(lambda line: line.state in ("pending", "counted"))
+                super(StockCountLine, first).write(
+                    {"counted_by_id": uid, "counted_at": now, "state": "counted"}
+                )
+            if "qty_recount" in vals:
+                second = self.filtered(lambda line: line.state == "recount")
+                super(StockCountLine, second).write(
+                    {"recounted_by_id": uid, "recounted_at": now, "state": "counted"}
+                )
+        return res
+
+    # ------------------------------------------------------------------
+    # Acciones del supervisor
+    # ------------------------------------------------------------------
+    def _check_manager(self):
+        if not self.env.user.has_group("stock_count.group_stock_count_manager"):
+            raise UserError(self.env._("Solo el supervisor puede hacer esta acción."))
+
+    def action_approve(self):
+        self._check_manager()
+        for line in self:
+            if line.state != "counted":
+                raise UserError(
+                    self.env._(
+                        "Solo se aprueban líneas contadas (%(product)s está %(state)s).",
+                        product=line.product_id.display_name,
+                        state=dict(LINE_STATES)[line.state].lower(),
+                    )
+                )
+        self.write({"state": "approved"})
+        return True
+
+    def action_request_recount(self):
+        self._check_manager()
+        for line in self:
+            if line.state not in ("counted", "approved"):
+                raise UserError(
+                    self.env._(
+                        "Solo se puede pedir reconteo de una línea contada o aprobada (%s).",
+                        line.product_id.display_name,
+                    )
+                )
+            if line.count_state not in ("counting", "review"):
+                raise UserError(self.env._("El recuento no está en conteo ni en revisión."))
+        self.write(
+            {
+                "state": "recount",
+                "qty_recount": 0.0,
+                "recounted_by_id": False,
+                "recounted_at": False,
+                "moved_during_count": False,
+            }
+        )
+        return True
+
+    def action_skip(self):
+        self._check_manager()
+        if any(line.state == "applied" for line in self):
+            raise UserError(self.env._("No se puede omitir una línea ya aplicada."))
+        self.write({"state": "skipped"})
+        return True
+
+    def action_reset_pending(self):
+        self._check_manager()
+        self.filtered(lambda line: line.state == "skipped").write({"state": "pending"})
+        return True
+
+    # ------------------------------------------------------------------
+    # Aplicación del ajuste con el motor nativo de quants
+    # ------------------------------------------------------------------
+    def _get_or_create_quant(self):
+        self.ensure_one()
+        if self.quant_id:
+            return self.quant_id
+        Quant = self.env["stock.quant"].with_company(self.company_id)
+        quant = Quant._gather(
+            self.product_id,
+            self.location_id,
+            lot_id=self.lot_id,
+            package_id=self.package_id,
+            owner_id=self.owner_id,
+            strict=True,
+        )[:1]
+        if not quant:
+            quant = Quant.sudo().create(
+                {
+                    "product_id": self.product_id.id,
+                    "location_id": self.location_id.id,
+                    "lot_id": self.lot_id.id,
+                    "package_id": self.package_id.id,
+                    "owner_id": self.owner_id.id,
+                    "quantity": 0.0,
+                }
+            )
+        self.quant_id = quant
+        return quant
+
+    def _apply(self):
+        """Aplica la cantidad final sobre el quant vía stock.quant._apply_inventory."""
+        self.ensure_one()
+        if self.state != "approved":
+            return
+        if self._is_diff_zero():
+            self.write({"state": "applied"})
+            return
+        quant = self._get_or_create_quant()
+        ctx = {
+            "inventory_name": self.count_id.name,
+            "stock_count_id": self.count_id.id,
+            "stock_count_line_id": self.id,
+            "stock_count_loss_location_id": self.reason_id.location_dest_id.id,
+        }
+        quant = quant.sudo().with_company(self.company_id).with_context(**ctx)
+        quant.write({"inventory_quantity": self.qty_final, "user_id": self.env.user.id})
+        quant._apply_inventory()
+        self.write({"state": "applied"})

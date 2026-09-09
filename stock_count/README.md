@@ -3,22 +3,33 @@
 Recuento físico como transacción. Ver el [README del repositorio](../README.md) para
 la descripción funcional completa y el plan de fases.
 
-## Estado: fase 0 (esqueleto)
+## Estado: fase 1 (núcleo funcional)
 
-Lo que ya existe:
+Flujo completo operativo, sin bloqueo de movimientos todavía (fase 2):
 
-- Modelos `stock.count`, `stock.count.line`, `stock.count.reason` con todos los campos
-  del diseño, estados y estadísticas calculadas (avance, diferencias, valor, precisión).
-- Configuración por compañía en Inventario › Configuración: conteo ciego, modo de
-  bloqueo por defecto, umbrales de reconteo y tolerancia de aprobación automática.
-- Grupos **Contador** y **Supervisor** con reglas de registro: el contador solo ve los
-  recuentos donde está asignado y sus propias líneas.
-- Secuencia `RC/AAAA/00001`, motivos de diferencia por defecto, menús y vistas.
-- Campos de enlace en `stock.move` (`count_id`), `stock.move.line` (`count_line_id`) y
-  `stock.quant` (`count_line_id`).
+- **Confirmar**: genera una línea por quant del alcance (ubicaciones con o sin hijas;
+  todos los productos, lista, categoría o lotes; opcionalmente líneas en cero) con la
+  cantidad teórica congelada, toma los quants (`count_line_id`) y valida que no haya otro
+  recuento activo sobre la misma clave producto / ubicación / lote.
+- **Iniciar conteo**: los contadores cargan el primer conteo; el sistema registra quién y
+  cuándo. Solo el asignado o el supervisor pueden cargar una línea asignada.
+- **Enviar a revisión**: aprueba solas las líneas dentro de la tolerancia y manda a
+  reconteo las que superan el umbral (porcentaje o unidades). El segundo conteo manda.
+- **Revisión**: aprobar, pedir reconteo, omitir, asignar motivo, línea a línea o en bloque.
+- **Aplicar**: detecta líneas cuyo quant ya no coincide con el teórico congelado
+  ("movidas durante el conteo") y exige decisión explícita; genera los ajustes con
+  `stock.quant._apply_inventory`, con el nombre del recuento como referencia, enlazados
+  al recuento (`stock.move.count_id`) y a la línea (`stock.move.line.count_line_id`).
+  Si el motivo tiene ubicación de destino, la pérdida va ahí (por ejemplo Scrap).
+- **Cancelar / Volver a borrador**: liberan los quants sin generar ajustes.
 
-Lo que viene en la fase 1: botones de transición, generación de líneas por alcance con
-snapshot del teórico, aplicación de ajustes vía `stock.quant._apply_inventory`.
+Base de la fase 0: modelos con todos los campos del diseño, configuración por compañía
+(conteo ciego, modo de bloqueo, umbrales), grupos **Contador** y **Supervisor** con reglas
+de registro, secuencia `RC/AAAA/00001`, motivos de diferencia, menús y vistas.
+
+Lo que viene en la fase 2: bloqueo de la validación de movimientos según `lock_mode`,
+marca automática de "movido durante el conteo" en modo Avisar, bloqueo de "Aplicar" en
+la pantalla nativa de Inventario físico sobre quants tomados.
 
 ## Notas de compatibilidad 19.0
 
