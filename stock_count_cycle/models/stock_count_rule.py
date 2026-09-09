@@ -56,7 +56,7 @@ class StockCountRule(models.Model):
         string="Ubicaciones",
         required=True,
         check_company=True,
-        domain="[('usage', '=', 'internal'), "
+        domain="[('usage', '=', 'internal'), ('warehouse_id', '=?', warehouse_id), "
         "'|', ('company_id', '=', company_id), ('company_id', '=', False)]",
     )
     include_children = fields.Boolean(string="Incluir sub-ubicaciones", default=True)
@@ -154,6 +154,13 @@ class StockCountRule(models.Model):
     # ------------------------------------------------------------------
     # Cómputos y validaciones
     # ------------------------------------------------------------------
+    @api.onchange("warehouse_id")
+    def _onchange_warehouse_id(self):
+        if self.warehouse_id and self.location_ids:
+            self.location_ids = self.location_ids.filtered(
+                lambda location: location.warehouse_id == self.warehouse_id
+            )
+
     @api.depends("rule_type")
     def _compute_rule_description(self):
         descriptions = {
