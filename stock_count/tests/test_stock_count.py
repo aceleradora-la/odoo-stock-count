@@ -110,7 +110,12 @@ class TestStockCount(TransactionCase):
             }
         )
         self.assertEqual(line.qty_final, 52.0)
-        line.write({"qty_recount": 41.0, "recounted_at": "2026-09-12 10:00:00"})
+        count.state = "review"
+        line.state = "recount"
+        line.write({"qty_recount": 41.0})
+        self.assertTrue(line.recounted_at, "el reconteo registra el momento")
+        self.assertEqual(line.recounted_by_id, self.env.user)
+        self.assertEqual(line.state, "counted")
         self.assertEqual(line.qty_final, 41.0)
         self.assertEqual(line.qty_diff, 1.0)
 

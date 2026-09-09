@@ -532,20 +532,32 @@ class StockCount(models.Model):
         for count in self:
             moved = count._detect_moved_lines()
             if moved and not force:
+                # No se lanza excepción: la marca en las líneas debe persistir para que el
+                # supervisor las vea y decida (reconteo o "Aplicar igualmente").
                 detail = "\n".join(
                     f"- {line.product_id.display_name} · {line.location_id.complete_name}: "
                     f"teórico {line.qty_theoretical}, ahora {line.qty_current}"
                     for line in moved[:10]
                 )
-                raise UserError(
-                    self.env._(
-                        "El stock de %(n)s líneas se movió después del snapshot:\n%(detail)s\n\n"
-                        "Revisá esas líneas (podés pedir reconteo) o usá 'Aplicar igualmente' "
-                        "para tomar la cantidad contada como cantidad final.",
-                        n=len(moved),
-                        detail=detail,
-                    )
+                message = self.env._(
+                    "El stock de %(n)s líneas se movió después del snapshot:\n%(detail)s\n\n"
+                    "Revisá esas líneas (podés pedir reconteo) o usá 'Aplicar igualmente' "
+                    "para tomar la cantidad contada como cantidad final.",
+                    n=len(moved),
+                    detail=detail,
                 )
+                count.message_post(body=message)
+                return {
+                    "type": "ir.actions.client",
+                    "tag": "display_notification",
+                    "params": {
+                        "title": self.env._("Stock movido durante el conteo"),
+                        "message": message,
+                        "type": "warning",
+                        "sticky": True,
+                        "next": {"type": "ir.actions.act_window_close"},
+                    },
+                }
             to_apply = count.line_ids.filtered(lambda line: line.state == "approved")
             for line in to_apply:
                 line._apply()

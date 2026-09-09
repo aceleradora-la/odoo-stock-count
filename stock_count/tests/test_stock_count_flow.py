@@ -336,9 +336,10 @@ class TestStockCountFlow(TransactionCase):
         count.action_to_review()
         screw = self._line(count, self.screw)
         self.assertEqual(screw.qty_current, 90.0)
-        with self.assertRaises(UserError) as err:
-            count.action_apply()
-        self.assertIn("se movió", str(err.exception))
+        result = count.action_apply()
+        self.assertEqual(result.get("tag"), "display_notification")
+        self.assertIn("se movió", result["params"]["message"])
+        self.assertEqual(count.state, "review", "no se aplica hasta decidir")
         self.assertTrue(screw.moved_during_count)
         self.assertEqual(count.moved_count, 1)
         count.action_apply_force()
@@ -358,9 +359,9 @@ class TestStockCountFlow(TransactionCase):
         line.write({"qty_counted": 6.0})
         line.reason_id = self.env.ref("stock_count.reason_unexpected")
         count.action_to_review()
-        self.assertEqual(
-            line.state, "counted", "teórico cero: no hay porcentaje, espera al supervisor"
-        )
+        self.assertEqual(line.state, "recount", "6 unidades superan el umbral de 3")
+        line.write({"qty_recount": 6.0})
+        self.assertEqual(line.state, "counted")
         line.action_approve()
         count.action_apply()
         self.assertEqual(self._qty(self.tape, self.shelf), 6.0)
