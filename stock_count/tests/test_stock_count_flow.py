@@ -276,6 +276,40 @@ class TestStockCountFlow(TransactionCase):
         count.action_to_review()
         self.assertEqual(self._line(count, self.screw).state, "approved")
 
+    def test_tolerance_100_approves_everything_including_zero_theoretical(self):
+        count = self._create_count(
+            scope="products",
+            product_ids=[(6, 0, (self.screw | self.tape).ids)],
+            include_zero_quants=True,
+            auto_approve_tolerance_pct=100.0,
+        )
+        count.action_confirm()
+        count.action_start()
+        self._line(count, self.screw).write({"qty_counted": 60.0})  # −40 %
+        self._line(count, self.tape).write({"qty_counted": 7.0})  # teórico cero
+        count.action_to_review()
+        self.assertTrue(
+            all(line.state == "approved" for line in count.line_ids),
+            "con 100 % no queda nada esperando aprobación",
+        )
+        count.action_apply()
+        self.assertEqual(count.state, "done")
+        self.assertEqual(self._qty(self.tape, self.shelf), 7.0)
+
+    def test_warehouse_change_drops_foreign_locations(self):
+        other_wh = self.env["stock.warehouse"].create(
+            {"name": "Depósito Sur", "code": "SUR", "company_id": self.company.id}
+        )
+        count = self._create_count()
+        self.assertEqual(count.location_ids, self.shelf)
+        count.warehouse_id = other_wh
+        count._onchange_warehouse_id()
+        self.assertFalse(count.location_ids, "el pasillo A no es del depósito Sur")
+        in_scope = self.env["stock.location"].search(
+            [("usage", "=", "internal"), ("warehouse_id", "=", other_wh.id)]
+        )
+        self.assertNotIn(self.shelf, in_scope)
+
     def test_diff_between_tolerance_and_threshold_waits_for_supervisor(self):
         count = self._create_count(recount_threshold_qty=10.0, recount_threshold_pct=5.0)
         count.action_confirm()

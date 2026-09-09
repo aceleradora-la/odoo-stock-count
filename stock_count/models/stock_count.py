@@ -50,7 +50,7 @@ class StockCount(models.Model):
         "location_id",
         string="Ubicaciones",
         check_company=True,
-        domain="[('usage', '=', 'internal'), "
+        domain="[('usage', '=', 'internal'), ('warehouse_id', '=?', warehouse_id), "
         "'|', ('company_id', '=', company_id), ('company_id', '=', False)]",
     )
     include_children = fields.Boolean(string="Incluir sub-ubicaciones", default=True)
@@ -172,6 +172,14 @@ class StockCount(models.Model):
     # ------------------------------------------------------------------
     # Defaults y cómputos
     # ------------------------------------------------------------------
+    @api.onchange("warehouse_id")
+    def _onchange_warehouse_id(self):
+        """Al cambiar de depósito se descartan las ubicaciones que no le pertenecen."""
+        if self.warehouse_id and self.location_ids:
+            self.location_ids = self.location_ids.filtered(
+                lambda location: location.warehouse_id == self.warehouse_id
+            )
+
     @api.model
     def _default_warehouse_id(self):
         return self.env["stock.warehouse"].search(
@@ -457,8 +465,12 @@ class StockCount(models.Model):
         return bool(over_qty or over_pct)
 
     def _line_within_tolerance(self, line):
+        """Tolerancia de aprobación automática. 100 % o más significa aprobar todo lo
+        contado; con teórico cero no hay porcentaje, así que solo aprueba con 100 %."""
         self.ensure_one()
         if line._is_diff_zero():
+            return True
+        if self.auto_approve_tolerance_pct >= 100:
             return True
         if not line.qty_theoretical:
             return False
