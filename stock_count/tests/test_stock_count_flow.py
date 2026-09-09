@@ -369,7 +369,9 @@ class TestStockCountFlow(TransactionCase):
         self.assertEqual(line.move_line_ids.location_dest_id, self.shelf)
 
     def test_reason_with_loss_location_redirects_negative_adjustment(self):
-        scrap = self.env["stock.location"].search([("scrap_location", "=", True)], limit=1)
+        scrap = self.env["stock.location"].create(
+            {"name": "Roturas", "usage": "inventory", "location_id": self.stock.location_id.id}
+        )
         reason = self.env["stock.count.reason"].create(
             {"name": "Rotura a scrap", "location_dest_id": scrap.id}
         )
