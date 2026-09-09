@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.form.stock_count</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="stock.res_config_settings_view_stock"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='stock']" position="inside">
+                <block title="Recuento de inventario" name="stock_count_setting_container">
+                    <setting id="stock_count_blind_setting" string="Conteo ciego" help="Los contadores no ven la cantidad teórica ni la diferencia. Aplica a todos los recuentos de la compañía.">
+                        <field name="stock_count_blind"/>
+                    </setting>
+                    <setting id="stock_count_lock_setting" string="Bloqueo de movimientos" help="Comportamiento por defecto de los recuentos nuevos al validar movimientos sobre stock en recuento. La reserva nunca se bloquea.">
+                        <field name="stock_count_lock_mode" class="o_light_label"/>
+                    </setting>
+                    <setting id="stock_count_thresholds_setting" string="Umbrales" help="Diferencias por encima del umbral exigen un segundo conteo; por debajo de la tolerancia se aprueban solas al pasar a revisión.">
+                        <div class="content-group">
+                            <div class="row mt8">
+                                <label for="stock_count_recount_threshold_pct" class="col-lg-7 o_light_label"/>
+                                <field name="stock_count_recount_threshold_pct" class="col-lg-3"/>
+                            </div>
+                            <div class="row">
+                                <label for="stock_count_recount_threshold_qty" class="col-lg-7 o_light_label"/>
+                                <field name="stock_count_recount_threshold_qty" class="col-lg-3"/>
+                            </div>
+                            <div class="row">
+                                <label for="stock_count_auto_approve_pct" class="col-lg-7 o_light_label"/>
+                                <field name="stock_count_auto_approve_pct" class="col-lg-3"/>
+                            </div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

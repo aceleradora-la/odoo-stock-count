@@ -1,0 +1,55 @@
+name: tests
+
+on:
+  push:
+    branches: ["18.0"]
+  pull_request:
+    branches: ["18.0"]
+
+env:
+  ODOO_VERSION: "18.0"
+  MODULES: "stock_count"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pre-commit
+      - run: pre-commit run --all-files --show-diff-on-failure
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and test modules inside the official Odoo image
+        run: |
+          set -o pipefail
+          docker run --rm --network host \
+            -v "$PWD:/mnt/extra-addons:ro" \
+            -e HOST=localhost -e USER=odoo -e PASSWORD=odoo \
+            odoo:${ODOO_VERSION} \
+            odoo -d test_${MODULES} \
+              --db_host=localhost --db_user=odoo --db_password=odoo \
+              --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
+              -i ${MODULES} --test-enable --test-tags "/${MODULES}" \
+              --stop-after-init --log-level=test 2>&1 | tee odoo-test.log
+          ! grep -E "^.* (ERROR|CRITICAL) " odoo-test.log

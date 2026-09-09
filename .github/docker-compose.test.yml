@@ -1,0 +1,29 @@
+# Uso local:  docker compose -f .github/docker-compose.test.yml up --abort-on-container-exit
+# Cambiar la imagen de odoo según la rama (odoo:17.0 / odoo:18.0 / odoo:19.0).
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 5s
+      retries: 10
+  odoo:
+    image: odoo:18.0
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: odoo
+    volumes:
+      - ..:/mnt/extra-addons:ro
+    command: >
+      odoo -d test_stock_count --db_host=db --db_user=odoo --db_password=odoo
+      --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
+      -i stock_count --test-enable --test-tags /stock_count
+      --stop-after-init --log-level=test

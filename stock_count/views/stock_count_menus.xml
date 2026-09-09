@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_stock_count_root" name="Recuentos" parent="stock.menu_stock_warehouse_mgmt" sequence="35" groups="stock_count.group_stock_count_user"/>
+    <menuitem id="menu_stock_count" name="Recuentos" parent="menu_stock_count_root" action="stock_count_action" sequence="10"/>
+    <menuitem id="menu_stock_count_line_mine" name="Mis líneas de conteo" parent="menu_stock_count_root" action="stock_count_line_action_mine" sequence="20"/>
+    <menuitem id="menu_stock_count_reason" name="Motivos de diferencia" parent="stock.menu_stock_config_settings" action="stock_count_reason_action" sequence="60" groups="stock.group_stock_manager"/>
+</odoo>

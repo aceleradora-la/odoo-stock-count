@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 99
+target-version = "py310"
+exclude = ["__pycache__", "static"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["UP008"]
+per-file-ignores = { "__init__.py" = ["F401", "I001"], "__manifest__.py" = ["B018"] }
+
+[tool.ruff.lint.isort]
+known-first-party = ["odoo"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]

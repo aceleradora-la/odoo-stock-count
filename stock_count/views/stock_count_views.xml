@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_count_view_form" model="ir.ui.view">
+        <field name="name">stock.count.form</field>
+        <field name="model">stock.count</field>
+        <field name="arch" type="xml">
+            <form string="Recuento">
+                <header>
+                    <!-- Los botones de transición (Confirmar, Iniciar conteo, Enviar a revisión,
+                         Aplicar, Cancelar) se agregan en la fase 1 junto con la lógica. -->
+                    <field name="state" widget="statusbar" statusbar_visible="draft,ready,counting,review,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_moves" type="object" class="oe_stat_button" icon="fa-exchange" invisible="move_count == 0">
+                            <field name="move_count" widget="statinfo" string="Ajustes"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group name="scope" string="Alcance">
+                            <field name="company_id" invisible="1"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="is_manager" invisible="1"/>
+                            <field name="warehouse_id" readonly="state != 'draft'"/>
+                            <field name="location_ids" widget="many2many_tags" readonly="state != 'draft'" options="{'no_create': True}"/>
+                            <field name="include_children" readonly="state != 'draft'"/>
+                            <field name="scope" readonly="state != 'draft'"/>
+                            <field name="product_ids" widget="many2many_tags" invisible="scope != 'products'" required="scope == 'products'" readonly="state != 'draft'"/>
+                            <field name="categ_id" invisible="scope != 'category'" required="scope == 'category'" readonly="state != 'draft'"/>
+                            <field name="lot_ids" widget="many2many_tags" invisible="scope != 'lots'" required="scope == 'lots'" readonly="state != 'draft'"/>
+                            <field name="include_zero_quants" readonly="state != 'draft'"/>
+                        </group>
+                        <group name="people" string="Responsables y reglas">
+                            <field name="user_id" readonly="state in ('done', 'cancel')"/>
+                            <field name="counter_ids" widget="many2many_tags" readonly="state in ('done', 'cancel')"/>
+                            <field name="date_planned" readonly="state in ('done', 'cancel')"/>
+                            <field name="date_start" invisible="not date_start"/>
+                            <field name="date_end" invisible="not date_end"/>
+                            <field name="lock_mode" readonly="state != 'draft'"/>
+                            <field name="blind"/>
+                            <field name="recount_threshold_pct" readonly="state in ('done', 'cancel')"/>
+                            <field name="recount_threshold_qty" readonly="state in ('done', 'cancel')"/>
+                            <field name="auto_approve_tolerance_pct" readonly="state in ('done', 'cancel')"/>
+                        </group>
+                    </group>
+                    <group name="stats" invisible="state == 'draft'">
+                        <group>
+                            <field name="progress" widget="progressbar"/>
+                            <field name="counted_count" string="Contadas"/>
+                            <field name="line_count" string="Líneas"/>
+                        </group>
+                        <group>
+                            <field name="diff_count" string="Con diferencia" invisible="blind and not is_manager"/>
+                            <field name="diff_value" invisible="blind and not is_manager"/>
+                            <field name="accuracy"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="lines" string="Líneas">
+                            <field name="line_ids" context="{'default_count_id': id}">
+                                <list editable="bottom" decoration-muted="state == 'skipped'" decoration-warning="state == 'recount'" decoration-success="state in ('approved', 'applied')">
+                                    <field name="location_id"/>
+                                    <field name="product_id"/>
+                                    <field name="lot_id" optional="show"/>
+                                    <field name="product_uom_id" optional="show"/>
+                                    <field name="qty_theoretical" invisible="blind and not parent.is_manager"/>
+                                    <field name="qty_counted"/>
+                                    <field name="counted_by_id" optional="show"/>
+                                    <field name="qty_recount" readonly="state != 'recount'" optional="show"/>
+                                    <field name="qty_diff" invisible="blind and not parent.is_manager" optional="show"/>
+                                    <field name="diff_pct" invisible="blind and not parent.is_manager" optional="hide"/>
+                                    <field name="diff_value" invisible="blind and not parent.is_manager" optional="hide"/>
+                                    <field name="assigned_user_id" optional="show"/>
+                                    <field name="reason_id" optional="show"/>
+                                    <field name="moved_during_count" optional="hide"/>
+                                    <field name="state" widget="badge" decoration-info="state == 'counted'" decoration-warning="state == 'recount'" decoration-success="state in ('approved', 'applied')"/>
+                                    <field name="blind" column_invisible="1"/>
+                                    <field name="company_id" column_invisible="1"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="moves" string="Ajustes generados" invisible="state not in ('done', 'cancel')">
+                            <field name="move_ids" readonly="1">
+                                <list>
+                                    <field name="reference"/>
+                                    <field name="date"/>
+                                    <field name="product_id"/>
+                                    <field name="location_id"/>
+                                    <field name="location_dest_id"/>
+                                    <field name="product_uom_qty"/>
+                                    <field name="state" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="notes" string="Notas">
+                            <field name="origin"/>
+                            <field name="note" nolabel="1" placeholder="Instrucciones para los contadores, observaciones…"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="stock_count_view_list" model="ir.ui.view">
+        <field name="name">stock.count.list</field>
+        <field name="model">stock.count</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="state == 'cancel'" decoration-info="state in ('ready', 'counting')" decoration-warning="state == 'review'">
+                <field name="name"/>
+                <field name="location_ids" widget="many2many_tags" optional="show"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+                <field name="date_planned"/>
+                <field name="progress" widget="progressbar" optional="show"/>
+                <field name="line_count" string="Líneas" optional="show"/>
+                <field name="diff_count" string="Con dif." optional="show"/>
+                <field name="diff_value" optional="show" sum="Total"/>
+                <field name="accuracy" optional="show"/>
+                <field name="lock_mode" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="state" widget="badge" decoration-info="state in ('ready', 'counting')" decoration-warning="state == 'review'" decoration-success="state == 'done'"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="stock_count_view_search" model="ir.ui.view">
+        <field name="name">stock.count.search</field>
+        <field name="model">stock.count</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="location_ids"/>
+                <field name="user_id"/>
+                <field name="counter_ids"/>
+                <filter name="my_counts" string="Mis recuentos" domain="['|', ('user_id', '=', uid), ('counter_ids', 'in', [uid])]"/>
+                <separator/>
+                <filter name="draft" string="Borrador" domain="[('state', '=', 'draft')]"/>
+                <filter name="active" string="Activos" domain="[('state', 'in', ('ready', 'counting', 'review'))]"/>
+                <filter name="done" string="Aplicados" domain="[('state', '=', 'done')]"/>
+                <separator/>
+                <filter name="date_planned" string="Fecha planificada" date="date_planned"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_user" string="Supervisor" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_warehouse" string="Depósito" context="{'group_by': 'warehouse_id'}"/>
+                    <filter name="group_month" string="Mes" context="{'group_by': 'date_planned:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="stock_count_action" model="ir.actions.act_window">
+        <field name="name">Recuentos</field>
+        <field name="res_model">stock.count</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="stock_count_view_search"/>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Creá el primer recuento</p>
+            <p>Elegí ubicaciones y productos, asigná contadores y confirmá: el stock teórico se congela y queda bloqueado hasta aplicar.</p>
+        </field>
+    </record>
+</odoo>
