@@ -119,9 +119,9 @@ class TestStockCountLock(TransactionCase):
         )
 
     def _qty(self, product, location, lot=None):
-        return self.env["stock.quant"]._get_available_quantity(
-            product, location, lot_id=lot, strict=True
-        )
+        """Cantidad física en el quant (la disponible descuenta lo reservado)."""
+        quants = self.env["stock.quant"]._gather(product, location, lot_id=lot, strict=True)
+        return sum(quants.mapped("quantity"))
 
     # ------------------------------------------------------------------
     # Modo Bloquear
