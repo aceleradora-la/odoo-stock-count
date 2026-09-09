@@ -630,3 +630,169 @@ class StockCount(models.Model):
         action["domain"] = [("count_id", "=", self.id)]
         action["context"] = {"create": False}
         return action
+
+    # ------------------------------------------------------------------
+    # Reportes
+    # ------------------------------------------------------------------
+    def _get_sheet_groups(self):
+        """Líneas para la hoja de conteo, agrupadas por contador y ubicación.
+
+        Nunca incluye el teórico: la hoja es para contar, no para comparar.
+        """
+        self.ensure_one()
+        groups = []
+        lines = self.line_ids.filtered(lambda line: line.state != "skipped").sorted(
+            key=lambda line: (
+                line.assigned_user_id.name or "",
+                line.location_id.complete_name,
+                line.product_id.display_name,
+                line.lot_id.name or "",
+            )
+        )
+        # Un grupo por contador y, al final, uno para las líneas sin asignar
+        for user in [*lines.assigned_user_id, self.env["res.users"]]:
+            user_lines = lines.filtered(lambda line, user=user: line.assigned_user_id == user)
+            if not user_lines:
+                continue
+            locations = []
+            for location in user_lines.location_id.sorted("complete_name"):
+                locations.append(
+                    {
+                        "location": location,
+                        "lines": user_lines.filtered(
+                            lambda line, location=location: line.location_id == location
+                        ),
+                    }
+                )
+            groups.append({"user": user, "locations": locations})
+        return groups
+
+    def _get_diff_report_data(self):
+        """Líneas con y sin diferencia para el informe, con totales."""
+        self.ensure_one()
+        lines = self.line_ids.filtered(lambda line: line.state not in ("pending", "skipped"))
+        with_diff = lines.filtered(lambda line: not line._is_diff_zero()).sorted(
+            key=lambda line: (abs(line.diff_value), abs(line.qty_diff)), reverse=True
+        )
+        without_diff = lines - with_diff
+        return {
+            "with_diff": with_diff,
+            "without_diff": without_diff,
+            "skipped": self.line_ids.filtered(lambda line: line.state == "skipped"),
+            "total_value": sum(with_diff.mapped("diff_value")),
+            "total_positive": sum(line.diff_value for line in with_diff if line.diff_value > 0),
+            "total_negative": sum(line.diff_value for line in with_diff if line.diff_value < 0),
+        }
+
+    def action_export_xlsx(self):
+        """Informe de diferencias en Excel, descargado como adjunto del recuento."""
+        self.ensure_one()
+        import base64
+        import io
+
+        import xlsxwriter
+
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+        bold = workbook.add_format({"bold": True})
+        header = workbook.add_format(
+            {"bold": True, "bg_color": "#E9E4EA", "border": 1, "text_wrap": True}
+        )
+        number = workbook.add_format({"num_format": "#,##0.00"})
+        money = workbook.add_format({"num_format": "#,##0.00"})
+        pct = workbook.add_format({"num_format": "0.00"})
+        negative = workbook.add_format({"num_format": "#,##0.00", "font_color": "#A02532"})
+        positive = workbook.add_format({"num_format": "#,##0.00", "font_color": "#146C43"})
+
+        sheet = workbook.add_worksheet("Diferencias")
+        sheet.write(0, 0, self.env._("Recuento"), bold)
+        sheet.write(0, 1, self.name)
+        sheet.write(1, 0, self.env._("Supervisor"), bold)
+        sheet.write(1, 1, self.user_id.name or "")
+        sheet.write(2, 0, self.env._("Ubicaciones"), bold)
+        sheet.write(2, 1, ", ".join(self.location_ids.mapped("complete_name")))
+        sheet.write(3, 0, self.env._("Inicio"), bold)
+        sheet.write(3, 1, str(self.date_start or ""))
+        sheet.write(4, 0, self.env._("Cierre"), bold)
+        sheet.write(4, 1, str(self.date_end or ""))
+        sheet.write(5, 0, self.env._("Precisión (%)"), bold)
+        sheet.write(5, 1, self.accuracy, pct)
+        sheet.write(6, 0, self.env._("Valor de las diferencias"), bold)
+        sheet.write(6, 1, self.diff_value, money)
+
+        columns = [
+            (self.env._("Ubicación"), 28),
+            (self.env._("Código"), 14),
+            (self.env._("Producto"), 36),
+            (self.env._("Lote"), 14),
+            (self.env._("UdM"), 10),
+            (self.env._("Teórico"), 12),
+            (self.env._("1er conteo"), 12),
+            (self.env._("Contó"), 18),
+            (self.env._("2do conteo"), 12),
+            (self.env._("Recontó"), 18),
+            (self.env._("Final"), 12),
+            (self.env._("Diferencia"), 12),
+            (self.env._("Dif. %"), 10),
+            (self.env._("Valor"), 14),
+            (self.env._("Motivo"), 18),
+            (self.env._("Comentario"), 30),
+            (self.env._("Movido durante el conteo"), 12),
+            (self.env._("Estado"), 12),
+        ]
+        row = 8
+        for col, (title, width) in enumerate(columns):
+            sheet.write(row, col, title, header)
+            sheet.set_column(col, col, width)
+        states = dict(self.line_ids._fields["state"]._description_selection(self.env))
+        data = self._get_diff_report_data()
+        for line in data["with_diff"] + data["without_diff"] + data["skipped"]:
+            row += 1
+            diff_fmt = negative if line.qty_diff < 0 else positive if line.qty_diff > 0 else number
+            values = [
+                (line.location_id.complete_name, None),
+                (line.product_id.default_code or "", None),
+                (line.product_id.name, None),
+                (line.lot_id.name or "", None),
+                (line.product_uom_id.name, None),
+                (line.qty_theoretical, number),
+                (line.qty_counted, number),
+                (line.counted_by_id.name or "", None),
+                (line.qty_recount if line.recounted_at else "", number),
+                (line.recounted_by_id.name or "", None),
+                (line.qty_final, number),
+                (line.qty_diff, diff_fmt),
+                (line.diff_pct, pct),
+                (line.diff_value, diff_fmt),
+                (line.reason_id.name or "", None),
+                (line.note or "", None),
+                (self.env._("Sí") if line.moved_during_count else "", None),
+                (states.get(line.state, line.state), None),
+            ]
+            for col, (value, fmt) in enumerate(values):
+                if fmt is not None and value != "":
+                    sheet.write_number(row, col, float(value), fmt)
+                else:
+                    sheet.write(row, col, value)
+        row += 2
+        sheet.write(row, 10, self.env._("Total"), bold)
+        sheet.write_number(row, 11, sum(data["with_diff"].mapped("qty_diff")), number)
+        sheet.write_number(row, 13, data["total_value"], money)
+        sheet.freeze_panes(9, 0)
+        workbook.close()
+
+        attachment = self.env["ir.attachment"].create(
+            {
+                "name": f"{self.name.replace('/', '_')}_diferencias.xlsx",
+                "type": "binary",
+                "datas": base64.b64encode(output.getvalue()),
+                "res_model": self._name,
+                "res_id": self.id,
+                "mimetype": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            }
+        )
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/web/content/{attachment.id}?download=true",
+            "target": "self",
+        }

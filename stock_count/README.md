@@ -3,7 +3,7 @@
 Recuento físico como transacción. Ver el [README del repositorio](../README.md) para
 la descripción funcional completa y el plan de fases.
 
-## Estado: fase 2 (núcleo + bloqueo de movimientos)
+## Estado: fase 4 (núcleo, bloqueo, contador móvil, conteo ciego y reportes)
 
 Flujo completo operativo:
 
@@ -45,8 +45,38 @@ quants. La lista de quants muestra la columna "En recuento".
 
 Los ajustes generados por el propio recuento llevan `count_id` y pasan el bloqueo.
 
-Lo que viene en la fase 3: vista móvil del contador con escaneo, conteo ciego forzado por
-ORM, asistente de reparto de líneas, producto no esperado.
+### Roles y vista móvil (fase 3)
+
+- **Contar** (Inventario › Operaciones › Recuentos › Contar): vista móvil OWL con las
+  ubicaciones del contador y su avance, líneas con cantidad grande y +1, escaneo de
+  ubicación o producto (lector físico o cámara: escanear un producto suma una unidad),
+  "Siguiente ubicación" y "Producto no esperado". Funciona en Community.
+- **Conteo ciego forzado por el ORM**: para el grupo Contador, teórico, actual,
+  diferencia y valor se devuelven en cero en toda lectura; export, filtro y agrupación por
+  esos campos se rechazan; una regla oculta los quants tomados por un recuento ciego. El
+  contador solo puede escribir cantidades, motivo y comentario.
+- **Repartir líneas**: por ubicación (cada ubicación entera a un solo contador,
+  balanceando carga) o línea a línea; por defecto no toca lo asignado ni lo contado.
+- **Producto no esperado**: desde el formulario o el móvil. Si el sistema tenía stock del
+  producto (fuera del alcance), el teórico toma la cantidad del quant.
+
+### Reportes (fase 4)
+
+- **Hoja de conteo (PDF)**: por contador y ubicación, con código de barras de recuento,
+  ubicación y producto, columna en blanco para anotar y firmas. Nunca muestra el teórico.
+- **Informe de diferencias (PDF)**: solo supervisores. Líneas con diferencia ordenadas por
+  valor, teórico / primer / segundo conteo, porcentaje, valor, motivo, quién contó,
+  totales de sobrantes y faltantes, firmas.
+- **Exportar Excel**: el mismo informe con todas las líneas, como adjunto descargable del
+  recuento (requiere `xlsxwriter`, que Odoo ya trae).
+- **Análisis de recuentos** (Inventario › Informes): pivot y gráfico sobre las líneas de
+  recuentos aplicados, por ubicación, depósito, producto, categoría, motivo, contador y
+  mes. Medidas: diferencia en unidades y en valor.
+- **Ubicación**: recuentos aplicados, fecha del último y precisión promedio de los
+  últimos cinco, con acceso a la lista de recuentos.
+
+Lo que viene: retroport a 18.0 y 17.0, puente con Código de barras de Enterprise (fase 6)
+y reglas de conteo cíclico que crean recuentos solos y asignan la tarea (fase 7).
 
 ## Notas de compatibilidad 19.0
 
@@ -56,6 +86,11 @@ Verificado sobre `odoo/odoo` rama 19.0 (`addons/stock/models/stock_quant.py`):
   parámetros.
 - El contexto `inventory_name` en 17.0 y 18.0 pone el `name` del movimiento; en 19.0 lo
   guarda en el campo nuevo `inventory_name` del `stock.move`.
+- Los grupos ya no llevan `category_id`: se agrupan por `res.groups.privilege`. En
+  `res.users`, `groups_id` pasó a `group_ids` / `all_group_ids`.
+- En las vistas de búsqueda, el `<group>` de "Agrupar por" ya no acepta `expand` ni `string`.
+- El modelo de paquetes pasó de `stock.quant.package` a `stock.package`.
+- Los dominios pueden llegar como objetos `Domain`; se recorren con `iter_conditions()`.
 - `action_apply_inventory` abre el asistente `stock.inventory.conflict` si el quant está
   `is_outdated`. Nuestro flujo llama a `_apply_inventory` directamente y resuelve el
   conflicto con la lógica propia de "movido durante el conteo".

@@ -45,13 +45,58 @@
                 <filter name="moved" string="Movidas durante el conteo" domain="[('moved_during_count', '=', True)]"/>
                 <separator/>
                 <filter name="active_counts" string="Recuentos activos" domain="[('count_state', 'in', ('ready', 'counting', 'review'))]"/>
+                <filter name="applied_counts" string="Recuentos aplicados" domain="[('count_state', '=', 'done')]"/>
+                <separator/>
+                <filter name="count_date" string="Fecha del recuento" date="count_date"/>
                 <group expand="0" string="Agrupar por">
                     <filter name="group_count" string="Recuento" context="{'group_by': 'count_id'}"/>
                     <filter name="group_location" string="Ubicación" context="{'group_by': 'location_id'}"/>
+                    <filter name="group_warehouse" string="Depósito" context="{'group_by': 'warehouse_id'}"/>
+                    <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
+                    <filter name="group_categ" string="Categoría" context="{'group_by': 'categ_id'}"/>
+                    <filter name="group_reason" string="Motivo" context="{'group_by': 'reason_id'}"/>
                     <filter name="group_user" string="Asignado a" context="{'group_by': 'assigned_user_id'}"/>
+                    <filter name="group_counted_by" string="Contó" context="{'group_by': 'counted_by_id'}"/>
                     <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_month" string="Mes del recuento" context="{'group_by': 'count_date:month'}"/>
                 </group>
             </search>
+        </field>
+    </record>
+
+    <record id="stock_count_line_view_pivot" model="ir.ui.view">
+        <field name="name">stock.count.line.pivot</field>
+        <field name="model">stock.count.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de recuentos" sample="1">
+                <field name="location_id" type="row"/>
+                <field name="count_date" interval="month" type="col"/>
+                <field name="qty_diff" type="measure"/>
+                <field name="diff_value" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="stock_count_line_view_graph" model="ir.ui.view">
+        <field name="name">stock.count.line.graph</field>
+        <field name="model">stock.count.line</field>
+        <field name="arch" type="xml">
+            <graph string="Análisis de recuentos" type="bar" sample="1" stacked="0">
+                <field name="reason_id"/>
+                <field name="diff_value" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="stock_count_line_action_analysis" model="ir.actions.act_window">
+        <field name="name">Análisis de recuentos</field>
+        <field name="res_model">stock.count.line</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="stock_count_line_view_search"/>
+        <field name="context">{'search_default_applied_counts': 1, 'search_default_with_diff': 1, 'search_default_group_location': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay recuentos aplicados</p>
+            <p>Cuando se apliquen recuentos, acá vas a poder cruzar diferencias por ubicación, producto, categoría, motivo, contador y mes.</p>
         </field>
     </record>
 

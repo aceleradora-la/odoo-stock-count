@@ -40,10 +40,10 @@ cuenta, y al aplicar se pierde quién contó, cuánto contó y por qué había d
 |---|---|---|
 | `main` | — | Solo documentación, sin módulos |
 | `17.0` | 17.0 CE / EE | Fase 0: esqueleto |
-| `18.0` | 18.0 CE / EE | Fase 2: flujo completo + bloqueo de movimientos (rama de desarrollo principal) |
-| `19.0` | 19.0 CE / EE | Fase 0: esqueleto |
+| `18.0` | 18.0 CE / EE | Fase 3: flujo completo, bloqueo, contador móvil y conteo ciego |
+| `19.0` | 19.0 CE / EE | Fase 3: flujo completo, bloqueo, contador móvil y conteo ciego (rama de desarrollo principal) |
 
-El desarrollo se hace primero sobre `18.0` y se porta a `17.0` y `19.0`.
+El desarrollo se hace primero sobre `19.0` y se retroporta a `18.0` y `17.0`.
 
 ## Instalación
 

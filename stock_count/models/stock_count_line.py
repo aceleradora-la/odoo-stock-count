@@ -118,6 +118,20 @@ class StockCountLine(models.Model):
     move_line_ids = fields.One2many(
         "stock.move.line", "count_line_id", string="Ajuste generado", readonly=True
     )
+    count_date = fields.Datetime(
+        related="count_id.date_planned", string="Fecha del recuento", store=True, index=True
+    )
+    count_user_id = fields.Many2one(related="count_id.user_id", string="Supervisor", store=True)
+    warehouse_id = fields.Many2one(related="count_id.warehouse_id", store=True)
+    categ_id = fields.Many2one(related="product_id.categ_id", store=True, string="Categoría")
+
+    @api.depends("count_id.name", "product_id.display_name", "location_id.name", "lot_id.name")
+    def _compute_display_name(self):
+        for line in self:
+            parts = [line.count_id.name, line.product_id.display_name, line.location_id.name]
+            if line.lot_id:
+                parts.append(line.lot_id.name)
+            line.display_name = " · ".join(part for part in parts if part)
 
     # ------------------------------------------------------------------
     # Cómputos

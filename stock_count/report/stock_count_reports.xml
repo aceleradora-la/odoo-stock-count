@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ===================== Hoja de conteo ===================== -->
+    <record id="action_report_count_sheet" model="ir.actions.report">
+        <field name="name">Hoja de conteo</field>
+        <field name="model">stock.count</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">stock_count.report_count_sheet</field>
+        <field name="report_file">stock_count.report_count_sheet</field>
+        <field name="print_report_name">'Hoja de conteo %s' % object.name.replace('/', '_')</field>
+        <field name="binding_model_id" ref="model_stock_count"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_count_sheet">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page o_stock_count_sheet">
+                        <div class="row mb-3">
+                            <div class="col-8">
+                                <h2>Hoja de conteo <span t-out="doc.name"/></h2>
+                                <div><strong>Ubicaciones:</strong> <span t-out="', '.join(doc.location_ids.mapped('complete_name'))"/>
+                                    <span t-if="doc.include_children">(con sub-ubicaciones)</span></div>
+                                <div><strong>Supervisor:</strong> <span t-out="doc.user_id.name"/></div>
+                                <div><strong>Fecha planificada:</strong> <span t-field="doc.date_planned"/></div>
+                                <div t-if="doc.note"><strong>Instrucciones:</strong> <span t-out="doc.note"/></div>
+                            </div>
+                            <div class="col-4 text-end">
+                                <img t-att-src="'/report/barcode/?barcode_type=Code128&amp;value=%s&amp;width=300&amp;height=60' % doc.name" style="max-width:100%; height:60px"/>
+                                <div class="small text-muted" t-out="doc.name"/>
+                            </div>
+                        </div>
+
+                        <t t-foreach="doc._get_sheet_groups()" t-as="group">
+                            <h3 class="mt-3">
+                                Contador:
+                                <t t-if="group['user']"><span t-out="group['user'].name"/></t>
+                                <t t-else="">sin asignar</t>
+                            </h3>
+                            <t t-foreach="group['locations']" t-as="block">
+                                <div class="d-flex justify-content-between align-items-end mt-2">
+                                    <h4 class="mb-1"><span t-out="block['location'].complete_name"/></h4>
+                                    <img t-if="block['location'].barcode" t-att-src="'/report/barcode/?barcode_type=Code128&amp;value=%s&amp;width=240&amp;height=40' % block['location'].barcode" style="height:36px"/>
+                                </div>
+                                <table class="table table-sm o_main_table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:22%">Código</th>
+                                            <th>Producto</th>
+                                            <th style="width:12%">Lote</th>
+                                            <th style="width:8%">UdM</th>
+                                            <th style="width:14%" class="text-center">Cantidad contada</th>
+                                            <th style="width:18%">Observaciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="block['lines']" t-as="line">
+                                            <td>
+                                                <img t-if="line.product_id.barcode" t-att-src="'/report/barcode/?barcode_type=Code128&amp;value=%s&amp;width=200&amp;height=30' % line.product_id.barcode" style="height:26px; max-width:100%"/>
+                                                <div class="small" t-out="line.product_id.default_code or line.product_id.barcode or ''"/>
+                                            </td>
+                                            <td><span t-out="line.product_id.name"/></td>
+                                            <td><span t-out="line.lot_id.name or ''"/></td>
+                                            <td><span t-out="line.product_uom_id.name"/></td>
+                                            <td class="text-center" style="border:1px solid #999; height:28px"></td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </t>
+                        </t>
+
+                        <div class="row mt-5">
+                            <div class="col-6">
+                                <div style="border-top:1px solid #000; width:80%; margin-top:40px; padding-top:4px">Firma del contador</div>
+                            </div>
+                            <div class="col-6">
+                                <div style="border-top:1px solid #000; width:80%; margin-top:40px; padding-top:4px">Firma del supervisor</div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- ===================== Informe de diferencias ===================== -->
+    <record id="action_report_count_diff" model="ir.actions.report">
+        <field name="name">Informe de diferencias</field>
+        <field name="model">stock.count</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">stock_count.report_count_diff</field>
+        <field name="report_file">stock_count.report_count_diff</field>
+        <field name="print_report_name">'Diferencias %s' % object.name.replace('/', '_')</field>
+        <field name="binding_model_id" ref="model_stock_count"/>
+        <field name="binding_type">report</field>
+        <field name="groups_id" eval="[(4, ref('stock_count.group_stock_count_manager'))]"/>
+    </record>
+
+    <template id="report_count_diff">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-set="data" t-value="doc._get_diff_report_data()"/>
+                <t t-call="web.external_layout">
+                    <div class="page o_stock_count_diff">
+                        <h2>Informe de diferencias <span t-out="doc.name"/></h2>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div><strong>Ubicaciones:</strong> <span t-out="', '.join(doc.location_ids.mapped('complete_name'))"/></div>
+                                <div><strong>Supervisor:</strong> <span t-out="doc.user_id.name"/></div>
+                                <div><strong>Contadores:</strong> <span t-out="', '.join(doc.counter_ids.mapped('name'))"/></div>
+                                <div><strong>Inicio:</strong> <span t-field="doc.date_start"/> · <strong>Cierre:</strong> <span t-field="doc.date_end"/></div>
+                            </div>
+                            <div class="col-6">
+                                <table class="table table-sm table-borderless mb-0">
+                                    <tr><td>Líneas contadas</td><td class="text-end"><span t-out="doc.counted_count"/> / <span t-out="doc.line_count"/></td></tr>
+                                    <tr><td>Con diferencia</td><td class="text-end"><span t-out="doc.diff_count"/></td></tr>
+                                    <tr><td>Precisión</td><td class="text-end"><span t-out="'%.2f' % doc.accuracy"/> %</td></tr>
+                                    <tr><td>Valor de las diferencias</td><td class="text-end"><span t-out="data['total_value']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td></tr>
+                                    <tr><td class="small text-muted">Sobrantes / faltantes</td><td class="text-end small text-muted">
+                                        <span t-out="data['total_positive']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/> /
+                                        <span t-out="data['total_negative']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td></tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <h4>Líneas con diferencia (<span t-out="len(data['with_diff'])"/>)</h4>
+                        <table class="table table-sm o_main_table" t-if="data['with_diff']">
+                            <thead>
+                                <tr>
+                                    <th>Ubicación</th>
+                                    <th>Producto</th>
+                                    <th>Lote</th>
+                                    <th class="text-end">Teórico</th>
+                                    <th class="text-end">1er conteo</th>
+                                    <th class="text-end">2do conteo</th>
+                                    <th class="text-end">Diferencia</th>
+                                    <th class="text-end">%</th>
+                                    <th class="text-end">Valor</th>
+                                    <th>Motivo</th>
+                                    <th>Contó</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="data['with_diff']" t-as="line">
+                                    <td><span t-out="line.location_id.complete_name"/></td>
+                                    <td><span t-out="line.product_id.display_name"/>
+                                        <span t-if="line.moved_during_count" class="badge text-bg-warning ms-1">movido</span></td>
+                                    <td><span t-out="line.lot_id.name or ''"/></td>
+                                    <td class="text-end"><span t-out="line.qty_theoretical"/></td>
+                                    <td class="text-end"><span t-out="line.qty_counted"/></td>
+                                    <td class="text-end"><span t-out="line.qty_recount if line.recounted_at else ''"/></td>
+                                    <td class="text-end" t-att-style="'color:#a02532' if line.qty_diff &lt; 0 else 'color:#146c43'"><strong t-out="'%+.2f' % line.qty_diff"/></td>
+                                    <td class="text-end"><span t-out="'%+.1f' % line.diff_pct if line.qty_theoretical else '—'"/></td>
+                                    <td class="text-end"><span t-out="line.diff_value" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td>
+                                    <td><span t-out="line.reason_id.name or ''"/><div t-if="line.note" class="small text-muted" t-out="line.note"/></td>
+                                    <td><span t-out="line.recounted_by_id.name or line.counted_by_id.name or ''"/></td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="6" class="text-end"><strong>Total</strong></td>
+                                    <td class="text-end"><strong t-out="'%+.2f' % sum(data['with_diff'].mapped('qty_diff'))"/></td>
+                                    <td></td>
+                                    <td class="text-end"><strong t-out="data['total_value']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p t-else="" class="text-muted">No hay diferencias.</p>
+
+                        <p class="mt-3 text-muted">
+                            <span t-out="len(data['without_diff'])"/> líneas sin diferencia
+                            <t t-if="data['skipped']">· <span t-out="len(data['skipped'])"/> omitidas</t>
+                        </p>
+
+                        <div class="row mt-5">
+                            <div class="col-6">
+                                <div style="border-top:1px solid #000; width:80%; margin-top:40px; padding-top:4px">Supervisor</div>
+                            </div>
+                            <div class="col-6">
+                                <div style="border-top:1px solid #000; width:80%; margin-top:40px; padding-top:4px">Responsable de depósito</div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
