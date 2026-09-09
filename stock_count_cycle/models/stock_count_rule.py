@@ -375,7 +375,12 @@ class StockCountRule(models.Model):
     def _run_accuracy(self):
         self.ensure_one()
         due = self.env["stock.location"]
-        for location in self._get_rule_locations():
+        locations = self._get_rule_locations()
+        # Indicadores no almacenados: se recalculan para no leer un valor viejo de la caché
+        locations.invalidate_recordset(
+            ["stock_count_count", "stock_count_accuracy", "stock_count_last_date"]
+        )
+        for location in locations:
             if self._recently_generated(location):
                 continue
             if location.stock_count_count and (
