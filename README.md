@@ -40,8 +40,8 @@ cuenta, y al aplicar se pierde quién contó, cuánto contó y por qué había d
 |---|---|---|
 | `main` | — | Solo documentación, sin módulos |
 | `17.0` | 17.0 CE / EE | Fase 0: esqueleto |
-| `18.0` | 18.0 CE / EE | Fase 3: flujo completo, bloqueo, contador móvil y conteo ciego |
-| `19.0` | 19.0 CE / EE | Fase 3: flujo completo, bloqueo, contador móvil y conteo ciego (rama de desarrollo principal) |
+| `18.0` | 18.0 CE / EE | Fase 4: flujo completo, bloqueo, contador móvil, conteo ciego y reportes |
+| `19.0` | 19.0 CE / EE | Fase 4: flujo completo, bloqueo, contador móvil, conteo ciego y reportes (rama de desarrollo principal) |
 
 El desarrollo se hace primero sobre `19.0` y se retroporta a `18.0` y `17.0`.
 
@@ -64,8 +64,8 @@ Agregar la carpeta al `addons_path`, actualizar la lista de aplicaciones e insta
 | 1 | Núcleo: entidad, líneas, snapshot, aplicación, seguridad, vistas, tests |
 | 2 | Bloqueo de movimientos: modos, exclusividad entre recuentos, detección |
 | 3 | Roles y revisión: vista de contador móvil, ciego, reconteo, motivos |
-| 4 | Reportes: hoja de conteo, informe de diferencias, análisis |
-| 5 | Ports a 17.0 y 19.0 |
+| 4 ✅ | Reportes: hoja de conteo, informe de diferencias, Excel, análisis (18.0 y 19.0) |
+| 5 | Retroport a 17.0 |
 | 6 | `stock_count_barcode`: puente con la app Código de barras de Enterprise |
 | 7 | `stock_count_cycle`: reglas de conteo cíclico que crean recuentos automáticamente y asignan la tarea al responsable |
 
