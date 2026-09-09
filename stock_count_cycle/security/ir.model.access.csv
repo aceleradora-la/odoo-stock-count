@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_stock_count_rule_manager,stock.count.rule manager,model_stock_count_rule,stock_count.group_stock_count_manager,1,1,1,1
+access_stock_count_rule_user,stock.count.rule user,model_stock_count_rule,stock_count.group_stock_count_user,1,0,0,0

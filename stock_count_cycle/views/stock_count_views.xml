@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_count_view_form_cycle" model="ir.ui.view">
+        <field name="name">stock.count.form.cycle</field>
+        <field name="model">stock.count</field>
+        <field name="inherit_id" ref="stock_count.stock_count_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='date_planned']" position="after">
+                <field name="rule_id" invisible="not rule_id"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="stock_count_view_search_cycle" model="ir.ui.view">
+        <field name="name">stock.count.search.cycle</field>
+        <field name="model">stock.count</field>
+        <field name="inherit_id" ref="stock_count.stock_count_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='date_planned']" position="after">
+                <separator/>
+                <filter name="from_rule" string="Generados por regla" domain="[('rule_id', '!=', False)]"/>
+            </xpath>
+            <xpath expr="//filter[@name='group_month']" position="after">
+                <filter name="group_rule" string="Regla" context="{'group_by': 'rule_id'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

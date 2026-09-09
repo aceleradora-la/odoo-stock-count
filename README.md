@@ -67,7 +67,7 @@ Agregar la carpeta al `addons_path`, actualizar la lista de aplicaciones e insta
 | 4 ✅ | Reportes: hoja de conteo, informe de diferencias, Excel, análisis (18.0 y 19.0) |
 | 5 | Retroport a 17.0 |
 | 6 | `stock_count_barcode`: puente con la app Código de barras de Enterprise |
-| 7 | `stock_count_cycle`: reglas de conteo cíclico que crean recuentos automáticamente y asignan la tarea al responsable |
+| 7 ✅ | `stock_count_cycle`: reglas de conteo cíclico que crean recuentos automáticamente y asignan la tarea al responsable (19.0) |
 
 ## Autor
 
