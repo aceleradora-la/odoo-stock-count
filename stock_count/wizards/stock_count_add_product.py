@@ -88,9 +88,12 @@ class StockCountAddProduct(models.TransientModel):
             .sudo()
             ._gather(self.product_id, self.location_id, lot_id=self.lot_id, strict=True)[:1]
         )
+        # Si el sistema sí tenía stock (producto fuera del alcance), el teórico es lo que
+        # dice el quant: la diferencia se mide contra eso. Si no había quant, es cero.
         vals.update(
             {
                 "quant_id": quant.id,
+                "qty_theoretical": quant.quantity if quant else 0.0,
                 "reason_id": self.reason_id.id,
                 "note": self.note,
                 "assigned_user_id": self.env.user.id
@@ -103,6 +106,7 @@ class StockCountAddProduct(models.TransientModel):
             quant.count_line_id = line
         line.with_user(self.env.user).write({"qty_counted": self.qty_counted})
         count.sudo().message_post(
+            subtype_xmlid="mail.mt_note",
             body=self.env._(
                 "Producto no esperado agregado por %(user)s: %(product)s en %(location)s, "
                 "%(qty)s %(uom)s.",
@@ -111,6 +115,6 @@ class StockCountAddProduct(models.TransientModel):
                 location=self.location_id.complete_name,
                 qty=self.qty_counted,
                 uom=self.product_uom_id.name,
-            )
+            ),
         )
         return {"type": "ir.actions.act_window_close"}

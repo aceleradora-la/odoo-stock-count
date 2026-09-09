@@ -102,6 +102,7 @@ class StockCountAssign(models.TransientModel):
                     f"({', '.join(sorted(set(locations)))})"
                 )
         count.message_post(
-            body=self.env._("Líneas repartidas:\n%s", "\n".join(f"- {item}" for item in summary))
+            subtype_xmlid="mail.mt_note",
+            body=self.env._("Líneas repartidas:\n%s", "\n".join(f"- {item}" for item in summary)),
         )
         return {"type": "ir.actions.act_window_close"}

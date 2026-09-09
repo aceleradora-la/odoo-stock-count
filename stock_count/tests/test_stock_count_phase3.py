@@ -65,17 +65,20 @@ class Phase3Common:
         cls.counter_group = cls.env.ref("stock_count.group_stock_count_user")
         cls.manager_group = cls.env.ref("stock_count.group_stock_count_manager")
         base_user = cls.env.ref("base.group_user")
+        export_group = cls.env.ref("base.group_allow_export")
         cls.counter = cls.env["res.users"].create(
             {
                 "name": "Luis Paz",
                 "login": "luis.paz",
-                "groups_id": [(6, 0, [base_user.id, cls.counter_group.id])],
+                "email": "luis@example.com",
+                "groups_id": [(6, 0, [base_user.id, cls.counter_group.id, export_group.id])],
             }
         )
         cls.other_counter = cls.env["res.users"].create(
             {
                 "name": "Marta Gil",
                 "login": "marta.gil",
+                "email": "marta@example.com",
                 "groups_id": [(6, 0, [base_user.id, cls.counter_group.id])],
             }
         )
@@ -83,7 +86,8 @@ class Phase3Common:
             {
                 "name": "Ana Torres",
                 "login": "ana.torres",
-                "groups_id": [(6, 0, [base_user.id, cls.manager_group.id])],
+                "email": "ana@example.com",
+                "groups_id": [(6, 0, [base_user.id, cls.manager_group.id, export_group.id])],
             }
         )
         cls.Count = cls.env["stock.count"]
@@ -305,16 +309,16 @@ class TestStockCountPhase3(Phase3Common, TransactionCase):
         count.action_start()
         self._add_product(count, self.roller, 38.0)
         line = self._line(count, self.roller)
-        self.assertEqual(line.qty_theoretical, 0.0, "no estaba previsto: teórico cero")
-        self.assertTrue(line.quant_id, "pero el quant existente queda enlazado y tomado")
+        self.assertTrue(line.quant_id, "el quant existente queda enlazado y tomado")
         self.assertEqual(line.quant_id.count_line_id, line)
-        line.write({"qty_counted": 38.0})
+        self.assertEqual(line.qty_theoretical, 40.0, "había stock: el teórico es el del quant")
+        self.assertEqual(line.qty_diff, -2.0)
         self._line(count, self.screw).write({"qty_counted": 100.0})
         count.action_to_review()
-        for line_ in count.line_ids.filtered(lambda line: line.state == "recount"):
-            line_.write({"qty_recount": line_.qty_counted})
+        self.assertEqual(line.state, "counted", "−5 %: ni tolerable ni reconteo")
         count.action_approve_all()
         count.action_apply()
+        self.assertEqual(count.state, "done")
         quants = self.env["stock.quant"]._gather(self.roller, self.shelf, strict=True)
         self.assertEqual(sum(quants.mapped("quantity")), 38.0, "el contado es absoluto: 40 → 38")
 
@@ -353,8 +357,10 @@ class TestStockCountPhase3(Phase3Common, TransactionCase):
         self.assertEqual(updated["quantity"], 99.0)
         self.assertEqual(self._line(count, self.screw).counted_by_id, self.counter)
 
+        paint_id = self._line(count, self.paint).id
+        self.env.invalidate_all()  # la caché es compartida entre usuarios en el test
         with self.assertRaises(AccessError, msg="la línea de Marta no es visible para Luis"):
-            Line.browse(self._line(count, self.paint).id).counter_set_quantity(1.0)
+            Line.browse(paint_id).counter_set_quantity(1.0)
 
         # En revisión, solo las líneas en reconteo vuelven a aparecer
         for line in count.line_ids.filtered(lambda line: line.state == "pending"):

@@ -424,12 +424,13 @@ class StockCount(models.Model):
                 line.quant_id.sudo().count_line_id = line
             count.write({"state": "ready", "date_start": fields.Datetime.now()})
             count.message_post(
+                subtype_xmlid="mail.mt_note",
                 body=self.env._(
                     "Recuento confirmado. %(lines)s líneas generadas con la cantidad teórica "
                     "congelada. Bloqueo de movimientos: %(lock)s.",
                     lines=len(lines),
                     lock=dict(LOCK_MODES)[count.lock_mode],
-                )
+                ),
             )
         return True
 
@@ -486,6 +487,7 @@ class StockCount(models.Model):
             recount.write({"state": "recount"})
             count.write({"state": "review"})
             count.message_post(
+                subtype_xmlid="mail.mt_note",
                 body=self.env._(
                     "Enviado a revisión. %(approved)s líneas aprobadas automáticamente "
                     "(tolerancia %(tol)s %%). %(recount)s líneas superan el umbral de reconteo "
@@ -495,7 +497,7 @@ class StockCount(models.Model):
                     recount=len(recount),
                     pct=count.recount_threshold_pct,
                     qty=count.recount_threshold_qty,
-                )
+                ),
             )
         return True
 
@@ -565,7 +567,7 @@ class StockCount(models.Model):
                     n=len(moved),
                     detail=detail,
                 )
-                count.message_post(body=message)
+                count.message_post(body=message, subtype_xmlid="mail.mt_note")
                 return {
                     "type": "ir.actions.client",
                     "tag": "display_notification",
@@ -584,12 +586,13 @@ class StockCount(models.Model):
             count.write({"state": "done", "date_end": fields.Datetime.now()})
             adjusted = to_apply.filtered("move_line_ids")
             count.message_post(
+                subtype_xmlid="mail.mt_note",
                 body=self.env._(
                     "Recuento aplicado. %(moves)s ajustes de inventario generados, "
                     "%(ok)s líneas sin diferencia. Bloqueo de movimientos liberado.",
                     moves=len(adjusted),
                     ok=len(to_apply) - len(adjusted),
-                )
+                ),
             )
         return True
 

@@ -77,11 +77,12 @@ class StockMove(models.Model):
                 for ml, cl in pairs
             )
             count.sudo().message_post(
+                subtype_xmlid="mail.mt_note",
                 body=self.env._(
                     "Se validaron movimientos sobre stock en recuento (modo Avisar). "
                     "Las líneas quedaron marcadas como movidas durante el conteo:\n%s",
                     detail,
-                )
+                ),
             )
 
 
