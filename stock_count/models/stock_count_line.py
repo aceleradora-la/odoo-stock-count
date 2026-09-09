@@ -20,7 +20,7 @@ COUNTER_WRITABLE_FIELDS = {"qty_counted", "qty_recount", "note", "reason_id"}
 
 def _domain_field_names(domain):
     for leaf in domain or ():
-        if isinstance(leaf, (list, tuple)) and len(leaf) == 3 and isinstance(leaf[0], str):
+        if isinstance(leaf, list | tuple) and len(leaf) == 3 and isinstance(leaf[0], str):
             yield leaf[0].split(".")[0]
 
 
