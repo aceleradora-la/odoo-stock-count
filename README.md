@@ -40,7 +40,7 @@ cuenta, y al aplicar se pierde quién contó, cuánto contó y por qué había d
 |---|---|---|
 | `main` | — | Solo documentación, sin módulos |
 | `17.0` | 17.0 CE / EE | Fase 0: esqueleto |
-| `18.0` | 18.0 CE / EE | Fase 0: esqueleto (rama de desarrollo principal) |
+| `18.0` | 18.0 CE / EE | Fase 1: flujo completo del recuento (rama de desarrollo principal) |
 | `19.0` | 19.0 CE / EE | Fase 0: esqueleto |
 
 El desarrollo se hace primero sobre `18.0` y se porta a `17.0` y `19.0`.
