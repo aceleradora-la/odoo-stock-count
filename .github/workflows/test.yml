@@ -8,7 +8,7 @@ on:
 
 env:
   ODOO_VERSION: "18.0"
-  MODULES: "stock_count"
+  MODULES: "stock_count,stock_count_cycle"
 
 jobs:
   lint:
@@ -47,9 +47,9 @@ jobs:
             -v "$PWD:/mnt/extra-addons:ro" \
             -e HOST=localhost -e USER=odoo -e PASSWORD=odoo \
             odoo:${ODOO_VERSION} \
-            odoo -d test_${MODULES} \
+            odoo -d test_odoo_stock_count \
               --db_host=localhost --db_user=odoo --db_password=odoo \
               --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
-              -i ${MODULES} --test-enable --test-tags "/${MODULES}" \
+              -i ${MODULES} --test-enable --test-tags "/stock_count,/stock_count_cycle" \
               --stop-after-init --log-level=test 2>&1 | tee odoo-test.log
           ! grep -E "^.* (ERROR|CRITICAL) " odoo-test.log

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_count_rule_view_form" model="ir.ui.view">
+        <field name="name">stock.count.rule.form</field>
+        <field name="model">stock.count.rule</field>
+        <field name="arch" type="xml">
+            <form string="Regla de conteo cíclico">
+                <header>
+                    <button name="action_run_now" type="object" string="Generar ahora" class="btn-primary" invisible="rule_type == 'zero'" help="Evalúa la regla hoy y crea el recuento si corresponde."/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_counts" type="object" class="oe_stat_button" icon="fa-list-ol">
+                            <field name="count_count" widget="statinfo" string="Recuentos"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archivada" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="p. ej. Pasillo A cada 30 días"/></h1>
+                    </div>
+                    <group>
+                        <group name="type" string="Cuándo">
+                            <field name="active" invisible="1"/>
+                            <field name="company_id" invisible="1"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="rule_type" widget="radio"/>
+                            <div class="text-muted" colspan="2"><field name="rule_description" nolabel="1" readonly="1"/></div>
+                            <field name="period_days" invisible="rule_type != 'periodic'" required="rule_type == 'periodic'"/>
+                            <field name="next_date" invisible="rule_type != 'periodic'"/>
+                            <field name="turnover_threshold" invisible="rule_type != 'turnover'" required="rule_type == 'turnover'"/>
+                            <field name="accuracy_threshold_pct" invisible="rule_type != 'accuracy'" required="rule_type == 'accuracy'"/>
+                            <field name="cooldown_days" invisible="rule_type == 'periodic'"/>
+                            <field name="last_run"/>
+                        </group>
+                        <group name="scope" string="Qué">
+                            <field name="warehouse_id"/>
+                            <field name="location_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            <field name="include_children"/>
+                            <field name="scope"/>
+                            <field name="categ_id" invisible="scope != 'category'" required="scope == 'category'"/>
+                            <field name="product_ids" widget="many2many_tags" invisible="scope != 'products'" required="scope == 'products'"/>
+                        </group>
+                        <group name="count" string="Recuento generado">
+                            <field name="user_id"/>
+                            <field name="counter_ids" widget="many2many_tags"/>
+                            <field name="lock_mode"/>
+                            <field name="planning_days"/>
+                            <field name="auto_confirm"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="stock_count_rule_view_list" model="ir.ui.view">
+        <field name="name">stock.count.rule.list</field>
+        <field name="model">stock.count.rule</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="rule_type"/>
+                <field name="location_ids" widget="many2many_tags"/>
+                <field name="next_date" optional="show"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+                <field name="auto_confirm" optional="hide"/>
+                <field name="last_run" optional="show"/>
+                <field name="count_count" string="Recuentos"/>
+                <field name="active" widget="boolean_toggle"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="stock_count_rule_view_search" model="ir.ui.view">
+        <field name="name">stock.count.rule.search</field>
+        <field name="model">stock.count.rule</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="location_ids"/>
+                <field name="user_id"/>
+                <filter name="inactive" string="Archivadas" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_type" string="Tipo" context="{'group_by': 'rule_type'}"/>
+                    <filter name="group_user" string="Supervisor" context="{'group_by': 'user_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="stock_count_rule_action" model="ir.actions.act_window">
+        <field name="name">Reglas de conteo cíclico</field>
+        <field name="res_model">stock.count.rule</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="stock_count_rule_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Definí la primera regla de conteo cíclico</p>
+            <p>Cada regla crea recuentos sola: cada N días, cuando una ubicación movió mucho valor, cuando su precisión cae, o cuando un producto llega a cero. El supervisor recibe la tarea como actividad.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_stock_count_rule" name="Reglas de conteo cíclico" parent="stock.menu_stock_config_settings" action="stock_count_rule_action" sequence="61" groups="stock_count.group_stock_count_manager"/>
+</odoo>

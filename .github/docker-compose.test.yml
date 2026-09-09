@@ -23,7 +23,7 @@ services:
     volumes:
       - ..:/mnt/extra-addons:ro
     command: >
-      odoo -d test_stock_count --db_host=db --db_user=odoo --db_password=odoo
+      odoo -d test_odoo_stock_count --db_host=db --db_user=odoo --db_password=odoo
       --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
-      -i stock_count --test-enable --test-tags /stock_count
+      -i stock_count,stock_count_cycle --test-enable --test-tags /stock_count,/stock_count_cycle
       --stop-after-init --log-level=test
