@@ -45,7 +45,7 @@
                 <filter name="moved" string="Movidas durante el conteo" domain="[('moved_during_count', '=', True)]"/>
                 <separator/>
                 <filter name="active_counts" string="Recuentos activos" domain="[('count_state', 'in', ('ready', 'counting', 'review'))]"/>
-                <group expand="0" string="Agrupar por">
+                <group>
                     <filter name="group_count" string="Recuento" context="{'group_by': 'count_id'}"/>
                     <filter name="group_location" string="Ubicación" context="{'group_by': 'location_id'}"/>
                     <filter name="group_user" string="Asignado a" context="{'group_by': 'assigned_user_id'}"/>

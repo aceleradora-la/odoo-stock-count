@@ -145,7 +145,7 @@
                 <filter name="done" string="Aplicados" domain="[('state', '=', 'done')]"/>
                 <separator/>
                 <filter name="date_planned" string="Fecha planificada" date="date_planned"/>
-                <group expand="0" string="Agrupar por">
+                <group>
                     <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
                     <filter name="group_user" string="Supervisor" context="{'group_by': 'user_id'}"/>
                     <filter name="group_warehouse" string="Depósito" context="{'group_by': 'warehouse_id'}"/>
