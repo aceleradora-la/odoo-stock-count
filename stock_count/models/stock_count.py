@@ -94,7 +94,7 @@ class StockCount(models.Model):
         default=lambda self: self.env.user,
         tracking=True,
         domain=lambda self: [
-            ("groups_id", "in", self.env.ref("stock_count.group_stock_count_manager").id)
+            ("all_group_ids", "in", self.env.ref("stock_count.group_stock_count_manager").id)
         ],
     )
     counter_ids = fields.Many2many(
@@ -104,7 +104,7 @@ class StockCount(models.Model):
         "user_id",
         string="Contadores",
         domain=lambda self: [
-            ("groups_id", "in", self.env.ref("stock_count.group_stock_count_user").id)
+            ("all_group_ids", "in", self.env.ref("stock_count.group_stock_count_user").id)
         ],
     )
     date_planned = fields.Datetime(
