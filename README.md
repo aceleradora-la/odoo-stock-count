@@ -39,18 +39,18 @@ cuenta, y al aplicar se pierde quién contó, cuánto contó y por qué había d
 | Rama | Odoo | Estado |
 |---|---|---|
 | `main` | — | Solo documentación, sin módulos |
-| `17.0` | 17.0 CE / EE | Fase 0: esqueleto |
-| `18.0` | 18.0 CE / EE | Fase 0: esqueleto (rama de desarrollo principal) |
-| `19.0` | 19.0 CE / EE | Fase 0: esqueleto |
+| `17.0` | 17.0 CE / EE | Fase 0: esqueleto (pendiente retroportar fases 1 a 3) |
+| `18.0` | 18.0 CE / EE | Fase 3: flujo completo, bloqueo, contador móvil y conteo ciego |
+| `19.0` | 19.0 CE / EE | Fase 3: flujo completo, bloqueo, contador móvil y conteo ciego (rama de desarrollo principal) |
 
-El desarrollo se hace primero sobre `18.0` y se porta a `17.0` y `19.0`.
+El desarrollo se hace primero sobre `19.0` y se retroporta a `18.0` y `17.0`.
 
 ## Instalación
 
 ```bash
 git clone https://github.com/aceleradora-la/odoo-stock-count.git
 cd odoo-stock-count
-git checkout 18.0   # o 17.0 / 19.0
+git checkout 19.0   # o 18.0 / 17.0
 ```
 
 Agregar la carpeta al `addons_path`, actualizar la lista de aplicaciones e instalar
@@ -60,10 +60,10 @@ Agregar la carpeta al `addons_path`, actualizar la lista de aplicaciones e insta
 
 | Fase | Contenido |
 |---|---|
-| 0 | Repo, ramas, CI, esqueleto del módulo, verificación del flujo de quants en 19.0 |
-| 1 | Núcleo: entidad, líneas, snapshot, aplicación, seguridad, vistas, tests |
-| 2 | Bloqueo de movimientos: modos, exclusividad entre recuentos, detección |
-| 3 | Roles y revisión: vista de contador móvil, ciego, reconteo, motivos |
+| 0 ✅ | Repo, ramas, CI, esqueleto del módulo, verificación del flujo de quants en 19.0 |
+| 1 ✅ | Núcleo: entidad, líneas, snapshot, aplicación, seguridad, vistas, tests |
+| 2 ✅ | Bloqueo de movimientos: modos, exclusividad entre recuentos, detección |
+| 3 ✅ | Roles y revisión: vista de contador móvil, ciego, reconteo, motivos (18.0 y 19.0) |
 | 4 | Reportes: hoja de conteo, informe de diferencias, análisis |
 | 5 | Ports a 17.0 y 19.0 |
 | 6 | `stock_count_barcode`: puente con la app Código de barras de Enterprise |
