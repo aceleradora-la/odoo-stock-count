@@ -14,18 +14,18 @@
                                 <select class="form-select" t-on-change="(ev) => this.selectCount(parseInt(ev.target.value) || false)">
                                     <option value="" t-att-selected="!state.countId">Todos los recuentos</option>
                                     <t t-foreach="state.counts" t-as="count" t-key="count.id">
-                                        <option t-att-value="count.id" t-att-selected="count.id === state.countId" t-esc="count.name"/>
+                                        <option t-att-value="count.id" t-att-selected="count.id === state.countId" t-out="count.name"/>
                                     </t>
                                 </select>
                             </t>
                             <t t-else="">
-                                <span t-esc="currentCount ? currentCount.name : 'Recuentos activos'"/>
+                                <span t-out="currentCount ? currentCount.name : 'Recuentos activos'"/>
                             </t>
                         </div>
                         <small class="text-muted">
-                            <t t-if="currentLocation" t-esc="currentLocation.name"/>
+                            <t t-if="currentLocation" t-out="currentLocation.name"/>
                             <t t-else="">
-                                <t t-esc="pendingTotal"/> líneas pendientes
+                                <t t-out="pendingTotal"/> líneas pendientes
                             </t>
                         </small>
                     </div>
@@ -54,9 +54,9 @@
             <div t-elif="!state.locationId" class="o_stock_count_counter_locations">
                 <t t-foreach="locations" t-as="location" t-key="location.id">
                     <button class="o_stock_count_counter_location" t-att-class="{ 'o_done': location.done === location.total }" t-on-click="() => this.openLocation(location.id)">
-                        <span class="o_stock_count_counter_location_name" t-esc="location.name"/>
+                        <span class="o_stock_count_counter_location_name" t-out="location.name"/>
                         <span class="o_stock_count_counter_location_progress">
-                            <t t-esc="location.done"/> / <t t-esc="location.total"/>
+                            <t t-out="location.done"/> / <t t-out="location.total"/>
                             <i t-if="location.done === location.total" class="fa fa-check text-success"/>
                             <i t-else="" class="fa fa-chevron-right"/>
                         </span>
@@ -71,12 +71,12 @@
                         <div class="o_stock_count_counter_line_info">
                             <div class="o_stock_count_counter_line_product">
                                 <i t-if="line.done" class="fa fa-check text-success me-1"/>
-                                <span t-esc="line.product_name"/>
+                                <span t-out="line.product_name"/>
                             </div>
                             <div class="o_stock_count_counter_line_meta text-muted">
-                                <span t-if="line.lot_name" class="badge text-bg-light me-1">Lote <t t-esc="line.lot_name"/></span>
+                                <span t-if="line.lot_name" class="badge text-bg-light me-1">Lote <t t-out="line.lot_name"/></span>
                                 <span t-if="line.is_recount" class="badge text-bg-warning me-1">2° conteo</span>
-                                <span t-esc="line.uom_name"/>
+                                <span t-out="line.uom_name"/>
                             </div>
                         </div>
                         <div class="o_stock_count_counter_line_qty">
