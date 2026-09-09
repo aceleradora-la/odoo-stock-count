@@ -3,9 +3,9 @@
 Recuento físico como transacción. Ver el [README del repositorio](../README.md) para
 la descripción funcional completa y el plan de fases.
 
-## Estado: fase 1 (núcleo funcional)
+## Estado: fase 2 (núcleo + bloqueo de movimientos)
 
-Flujo completo operativo, sin bloqueo de movimientos todavía (fase 2):
+Flujo completo operativo:
 
 - **Confirmar**: genera una línea por quant del alcance (ubicaciones con o sin hijas;
   todos los productos, lista, categoría o lotes; opcionalmente líneas en cero) con la
@@ -27,9 +27,26 @@ Base de la fase 0: modelos con todos los campos del diseño, configuración por 
 (conteo ciego, modo de bloqueo, umbrales), grupos **Contador** y **Supervisor** con reglas
 de registro, secuencia `RC/AAAA/00001`, motivos de diferencia, menús y vistas.
 
-Lo que viene en la fase 2: bloqueo de la validación de movimientos según `lock_mode`,
-marca automática de "movido durante el conteo" en modo Avisar, bloqueo de "Aplicar" en
-la pantalla nativa de Inventario físico sobre quants tomados.
+### Bloqueo de movimientos (fase 2)
+
+Desde que el recuento se confirma hasta que se aplica o cancela, el par producto +
+ubicación (+ lote) de cada línea queda protegido según el modo del recuento:
+
+- **Bloquear**: `stock.move._action_done` rechaza la validación con un mensaje que dice
+  producto, ubicación, recuento y supervisor. Cubre transferencias, fabricación, punto de
+  venta, desecho y ajustes manuales. La **reserva sigue permitida**.
+- **Avisar**: el movimiento pasa, la línea queda marcada como "movida durante el conteo"
+  y el chatter del recuento registra qué movimiento fue. Al aplicar, el supervisor decide.
+- **Sin control**: nada en tiempo real; al aplicar se detecta igual si el quant cambió.
+
+Además, el botón Aplicar de Inventario físico nativo (y el borrado de quants) se rechaza
+sobre quants tomados por un recuento: el ajuste sale del recuento, no de la pantalla de
+quants. La lista de quants muestra la columna "En recuento".
+
+Los ajustes generados por el propio recuento llevan `count_id` y pasan el bloqueo.
+
+Lo que viene en la fase 3: vista móvil del contador con escaneo, conteo ciego forzado por
+ORM, asistente de reparto de líneas, producto no esperado.
 
 ## Notas de compatibilidad 19.0
 

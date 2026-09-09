@@ -153,6 +153,22 @@ class StockCountLine(models.Model):
             float_compare(current, self.qty_theoretical, precision_rounding=self._rounding()) != 0
         )
 
+    @api.model
+    def _get_active_lock_lines(self, products, locations, companies=None):
+        """Líneas de recuentos activos con bloqueo (block o warn) sobre estos productos y
+        ubicaciones. Una sola consulta; product_id, location_id y count_state están
+        indexados para que validar un picking grande no cueste."""
+        domain = [
+            ("count_state", "in", ("ready", "counting", "review")),
+            ("state", "not in", ("applied", "skipped")),
+            ("count_id.lock_mode", "!=", "none"),
+            ("product_id", "in", products.ids),
+            ("location_id", "in", locations.ids),
+        ]
+        if companies:
+            domain.append(("company_id", "in", companies.ids))
+        return self.search(domain)
+
     # ------------------------------------------------------------------
     # ORM: cargar un conteo registra quién y cuándo, y avanza el estado
     # ------------------------------------------------------------------
