@@ -116,7 +116,7 @@
                                 <table class="table table-sm table-borderless mb-0">
                                     <tr><td>Líneas contadas</td><td class="text-end"><span t-out="doc.counted_count"/> / <span t-out="doc.line_count"/></td></tr>
                                     <tr><td>Con diferencia</td><td class="text-end"><span t-out="doc.diff_count"/></td></tr>
-                                    <tr><td>Precisión</td><td class="text-end"><span t-out="'%.2f %%' % doc.accuracy"/></td></tr>
+                                    <tr><td>Precisión</td><td class="text-end"><span t-out="'%.2f' % doc.accuracy"/> %</td></tr>
                                     <tr><td>Valor de las diferencias</td><td class="text-end"><span t-out="data['total_value']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td></tr>
                                     <tr><td class="small text-muted">Sobrantes / faltantes</td><td class="text-end small text-muted">
                                         <span t-out="data['total_positive']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/> /

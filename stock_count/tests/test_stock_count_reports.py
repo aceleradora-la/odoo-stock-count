@@ -85,7 +85,7 @@ class TestStockCountReports(TransactionCase):
         count.line_ids.write({"assigned_user_id": self.counter.id})
         for line in count.line_ids:
             qty = 98.0 if line.product_id == self.screw else 40.0
-            line.write({"qty_counted": qty})
+            line.with_user(self.counter).write({"qty_counted": qty})
         count.action_to_review()
         count.action_approve_all()
         count.action_apply()
