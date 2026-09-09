@@ -2,12 +2,12 @@ name: tests
 
 on:
   push:
-    branches: ["18.0"]
+    branches: ["19.0"]
   pull_request:
-    branches: ["18.0"]
+    branches: ["19.0"]
 
 env:
-  ODOO_VERSION: "18.0"
+  ODOO_VERSION: "19.0"
   MODULES: "stock_count"
 
 jobs:

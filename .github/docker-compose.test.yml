@@ -12,7 +12,7 @@ services:
       interval: 5s
       retries: 10
   odoo:
-    image: odoo:18.0
+    image: odoo:19.0
     depends_on:
       db:
         condition: service_healthy
