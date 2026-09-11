@@ -214,6 +214,7 @@ class TestStockCountFlow(TransactionCase):
                 (self.paint, self.lot_b, 9.0),  # −25 % → reconteo
             ],
         )
+        self.assertFalse(count.has_recount, "sin reconteos no se muestran sus columnas")
         count.action_to_review()
         self.assertEqual(count.state, "review")
         screw = self._line(count, self.screw)
@@ -222,6 +223,7 @@ class TestStockCountFlow(TransactionCase):
         self.assertEqual(screw.state, "approved")
         self.assertEqual(roller.state, "recount")
         self.assertEqual(paint_b.state, "recount")
+        self.assertTrue(count.has_recount, "con reconteos pedidos, aparecen las columnas")
 
         with self.assertRaises(UserError, msg="no se aplica con reconteos pendientes"):
             count.action_apply()
