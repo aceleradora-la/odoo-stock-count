@@ -2,16 +2,20 @@
 
 import { Component, onWillStart, useRef, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
-import { useService } from "@web/core/utils/hooks";
+import { useBus, useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
+import { scanBarcode } from "@web/core/barcode/barcode_dialog";
+import { isBarcodeScannerSupported } from "@web/core/barcode/barcode_video_scanner";
 
 /**
  * Vista móvil del contador.
  *
  * Muestra las líneas a contar del usuario (asignadas a él, o libres de los recuentos
  * donde es contador) agrupadas por ubicación, con un campo de cantidad grande, botón +1
- * y un campo de escaneo que reacciona a lectores físicos o de cámara: escanear una
- * ubicación la abre; escanear un producto suma una unidad a su línea.
+ * y escaneo por tres vías: lector físico (servicio de código de barras de Odoo, sin
+ * necesidad de enfocar nada), cámara del dispositivo (lector de vídeo del núcleo web) y
+ * campo de texto para tipear. Escanear una ubicación la abre; escanear un producto suma
+ * una unidad (o la cantidad embebida en un código GS1) a su línea.
  *
  * Nunca pide al servidor la cantidad teórica: el conteo desde acá es siempre "a ciegas"
  * en pantalla, y en conteo ciego el ORM además la devuelve en cero.
@@ -24,7 +28,10 @@ export class StockCountCounter extends Component {
         this.orm = useService("orm");
         this.action = useService("action");
         this.notification = useService("notification");
+        this.barcode = useService("barcode");
         this.scanInput = useRef("scanInput");
+        this.cameraSupported = isBarcodeScannerSupported();
+        useBus(this.barcode.bus, "barcode_scanned", (ev) => this.handleScan(ev.detail.barcode));
         this.state = useState({
             loading: true,
             counts: [],
@@ -190,44 +197,47 @@ export class StockCountCounter extends Component {
     // ------------------------------------------------------------------
     // Escaneo
     // ------------------------------------------------------------------
-    async onScan(ev) {
+    /** Enter en el campo de texto: mismo camino que un lector físico. */
+    onScan(ev) {
         if (ev.key !== "Enter") {
             return;
         }
         ev.preventDefault();
         const code = this.state.scan.trim();
         this.state.scan = "";
-        if (!code) {
-            return;
+        return this.handleScan(code);
+    }
+
+    /** Cámara del dispositivo (lector de vídeo del núcleo de Odoo). */
+    async openCamera() {
+        try {
+            const code = await scanBarcode(this.env);
+            if (code) {
+                await this.handleScan(code);
+            }
+        } catch (error) {
+            this.notification.add(
+                _t("No se pudo usar la cámara: %s", error.message || error),
+                { type: "danger" }
+            );
         }
-        const lower = code.toLowerCase();
-        const location = this.locations.find(
-            (l) => (l.barcode && l.barcode.toLowerCase() === lower) || l.name.toLowerCase() === lower
-        );
-        if (location) {
-            this.openLocation(location.id);
-            return;
-        }
-        const matches = (line) =>
-            (line.product_barcode && line.product_barcode.toLowerCase() === lower) ||
-            (line.product_code && line.product_code.toLowerCase() === lower) ||
-            (line.lot_name && line.lot_name.toLowerCase() === lower);
-        let line = this.currentLines.find(matches);
+    }
+
+    /** Busca la línea del producto (y lote) primero en la ubicación abierta. */
+    _findLine(predicate) {
+        let line = this.currentLines.find(predicate);
         if (!line) {
-            line = this.state.lines.find(matches);
+            line = this.state.lines.find(predicate);
             if (line) {
                 this.openLocation(line.location_id);
             }
         }
-        if (!line) {
-            this.notification.add(
-                _t("%s no está en el recuento. Si está en la estantería, usá 'Producto no esperado'.", code),
-                { type: "warning" }
-            );
-            return;
-        }
-        if (this.state.scanAddsOne) {
-            await this.addOne(line, 1);
+        return line;
+    }
+
+    async _countLine(line, quantity) {
+        if (this.state.scanAddsOne || quantity !== 1) {
+            await this.addOne(line, quantity);
         } else {
             const input = document.querySelector(`[data-line-id="${line.id}"] input`);
             if (input) {
@@ -235,6 +245,63 @@ export class StockCountCounter extends Component {
                 input.select();
             }
         }
+    }
+
+    async handleScan(code) {
+        code = (code || "").trim();
+        if (!code || this.state.loading) {
+            return;
+        }
+        const lower = code.toLowerCase();
+        // 1) Lo que ya tenemos en pantalla, sin ir al servidor
+        const location = this.locations.find(
+            (l) => (l.barcode && l.barcode.toLowerCase() === lower) || l.name.toLowerCase() === lower
+        );
+        if (location) {
+            this.openLocation(location.id);
+            return;
+        }
+        const local = this._findLine(
+            (line) =>
+                (line.product_barcode && line.product_barcode.toLowerCase() === lower) ||
+                (line.product_code && line.product_code.toLowerCase() === lower) ||
+                (line.lot_name && line.lot_name.toLowerCase() === lower)
+        );
+        if (local) {
+            await this._countLine(local, 1);
+            return;
+        }
+        // 2) El servidor interpreta el código con la nomenclatura (GS1, peso, lote…)
+        const resolved = await this.orm.call("stock.count.line", "counter_resolve_barcode", [
+            code,
+            this.state.countId || false,
+        ]);
+        if (resolved.type === "location") {
+            const known = this.locations.find((l) => l.id === resolved.location_id);
+            if (known) {
+                this.openLocation(known.id);
+            } else {
+                this.notification.add(_t("Esa ubicación no está en tu recuento."), { type: "warning" });
+            }
+            return;
+        }
+        if (resolved.type === "product") {
+            const line = this._findLine(
+                (line) =>
+                    line.product_id === resolved.product_id &&
+                    (!resolved.lot_id || line.lot_id === resolved.lot_id)
+            );
+            if (line) {
+                await this._countLine(line, resolved.quantity || 1);
+                return;
+            }
+            this.notification.add(
+                _t("El producto escaneado no está en el recuento. Si está en la estantería, usá 'Producto no esperado'."),
+                { type: "warning" }
+            );
+            return;
+        }
+        this.notification.add(_t("Código no reconocido: %s", code), { type: "warning" });
     }
 
     // ------------------------------------------------------------------

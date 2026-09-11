@@ -378,6 +378,128 @@ class StockCountLine(models.Model):
             "lines": [line.sudo()._counter_line_data() for line in lines],
         }
 
+    @api.model
+    def counter_resolve_barcode(self, barcode, count_id=False):
+        """Interpreta un código escaneado en la vista móvil.
+
+        Primero busca coincidencias exactas (ubicación, producto por código de barras o
+        referencia interna, lote de los productos en conteo). Si no hay, usa la
+        nomenclatura de la compañía: con GS1 entiende producto, lote y cantidad en un
+        mismo código; con la nomenclatura clásica, productos con peso o cantidad embebida.
+        """
+        barcode = (barcode or "").strip()
+        result = {
+            "barcode": barcode,
+            "type": "unknown",
+            "location_id": False,
+            "product_id": False,
+            "lot_id": False,
+            "quantity": 1.0,
+        }
+        if not barcode:
+            return result
+        Location = self.env["stock.location"].sudo()
+        Product = self.env["product.product"].sudo()
+        Lot = self.env["stock.lot"].sudo()
+        company = self.env.company
+
+        def found_location(location):
+            result.update({"type": "location", "location_id": location.id})
+            return result
+
+        def found_product(product, lot=None, quantity=1.0):
+            result.update(
+                {
+                    "type": "product",
+                    "product_id": product.id,
+                    "lot_id": lot.id if lot else False,
+                    "quantity": quantity or 1.0,
+                }
+            )
+            return result
+
+        location = Location.search(
+            [("barcode", "=", barcode), ("usage", "=", "internal")], limit=1
+        )
+        if location:
+            return found_location(location)
+        product = Product.search(
+            ["|", ("barcode", "=", barcode), ("default_code", "=", barcode)], limit=1
+        )
+        if product:
+            return found_product(product)
+        my_products = self.search(self._counter_domain(count_id)).product_id
+        lot = Lot.search([("name", "=", barcode), ("product_id", "in", my_products.ids)], limit=1)
+        if lot:
+            return found_product(lot.product_id, lot)
+
+        nomenclature = company.nomenclature_id
+        if not nomenclature:
+            return result
+        try:
+            parsed = nomenclature.parse_barcode(barcode)
+        except Exception:  # noqa: BLE001 - un código raro no debe romper el escaneo
+            return result
+
+        if isinstance(parsed, list):  # GS1: varias partes en un mismo código
+            gtin = lot_name = location_code = None
+            quantity = 1.0
+            for part in parsed:
+                kind, value = part.get("type"), part.get("value")
+                if kind == "product":
+                    gtin = str(value)
+                elif kind == "lot":
+                    lot_name = str(value)
+                elif kind == "quantity" and value:
+                    quantity = float(value)
+                elif kind in ("location", "location_dest"):
+                    location_code = str(value)
+            if location_code and not gtin:
+                location = Location.search(
+                    [("barcode", "=", location_code), ("usage", "=", "internal")], limit=1
+                )
+                if location:
+                    return found_location(location)
+            if gtin:
+                unpadded = gtin.lstrip("0")
+                product = Product.search([("barcode", "ilike", unpadded)]).filtered(
+                    lambda product: (product.barcode or "").lstrip("0") == unpadded
+                )[:1]
+                if product:
+                    lot = None
+                    if lot_name:
+                        lot = Lot.search(
+                            [("name", "=", lot_name), ("product_id", "=", product.id)], limit=1
+                        )
+                    return found_product(product, lot, quantity)
+            return result
+
+        if isinstance(parsed, dict) and parsed.get("type") not in (None, "error"):
+            kind = parsed["type"]
+            base_code = parsed.get("base_code") or barcode
+            if kind == "location":
+                location = Location.search(
+                    [("barcode", "=", base_code), ("usage", "=", "internal")], limit=1
+                )
+                if location:
+                    return found_location(location)
+            elif kind == "lot":
+                lot = Lot.search(
+                    [
+                        ("name", "=", parsed.get("code") or barcode),
+                        ("product_id", "in", my_products.ids),
+                    ],
+                    limit=1,
+                )
+                if lot:
+                    return found_product(lot.product_id, lot)
+            else:
+                product = Product.search([("barcode", "=", base_code)], limit=1)
+                if product:
+                    quantity = parsed.get("value") if kind == "weight" else 1.0
+                    return found_product(product, None, quantity or 1.0)
+        return result
+
     def counter_set_quantity(self, quantity):
         """Carga primer o segundo conteo según el estado de la línea."""
         self.ensure_one()

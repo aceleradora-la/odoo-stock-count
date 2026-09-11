@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Entrada "Recuentos" en el menú de la app Código de barras: abre la vista Contar. -->
+    <menuitem id="menu_stock_count_barcode_counter"
+              name="Recuentos"
+              parent="stock_barcode.stock_barcode_menu"
+              action="stock_count.action_stock_count_counter"
+              sequence="30"
+              groups="stock_count.group_stock_count_user"/>
+</odoo>
