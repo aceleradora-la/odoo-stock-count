@@ -9,8 +9,8 @@
                     <button name="action_confirm" type="object" string="Confirmar" class="btn-primary" invisible="state != 'draft'" groups="stock_count.group_stock_count_manager"/>
                     <button name="action_start" type="object" string="Iniciar conteo" class="btn-primary" invisible="state != 'ready'" groups="stock_count.group_stock_count_manager"/>
                     <button name="action_to_review" type="object" string="Enviar a revisión" class="btn-primary" invisible="state != 'counting'" groups="stock_count.group_stock_count_manager" help="Pasa solo a revisión al cargar la última línea. Usalo si querés revisar antes, omitiendo lo que falta."/>
-                    <button name="action_apply" type="object" string="Aplicar" class="btn-primary" invisible="state != 'review' or moved_count > 0 or pending_count > 0 or recount_count > 0" groups="stock_count.group_stock_count_manager" confirm="Se van a generar los ajustes de inventario con las cantidades contadas. Esta acción no se puede deshacer. ¿Continuar?"/>
-                    <button name="action_apply_force" type="object" string="Aplicar igualmente" class="btn-warning" invisible="state != 'review' or moved_count == 0 or pending_count > 0 or recount_count > 0" groups="stock_count.group_stock_count_manager" confirm="Hay líneas cuyo stock se movió después del snapshot. Se tomará la cantidad contada como cantidad final. ¿Continuar?"/>
+                    <button name="action_apply" type="object" string="Validar" class="btn-primary" invisible="state != 'review' or moved_count > 0 or pending_count > 0 or recount_count > 0" groups="stock_count.group_stock_count_manager" confirm="Se van a generar los ajustes de inventario con las cantidades contadas. Esta acción no se puede deshacer. ¿Continuar?"/>
+                    <button name="action_apply_force" type="object" string="Validar igualmente" class="btn-warning" invisible="state != 'review' or moved_count == 0 or pending_count > 0 or recount_count > 0" groups="stock_count.group_stock_count_manager" confirm="Hay líneas cuyo stock se movió después del snapshot. Se tomará la cantidad contada como cantidad final. ¿Continuar?"/>
                     <button name="action_approve_within_tolerance" type="object" string="Aprobar dentro de tolerancia" invisible="state != 'review'" groups="stock_count.group_stock_count_manager"/>
                     <button name="action_approve_all" type="object" string="Aprobar todas las contadas" invisible="state != 'review'" groups="stock_count.group_stock_count_manager"/>
                     <button name="action_accept_first_counts" type="object" string="Aceptar 1er conteo sin recontar" invisible="state != 'review' or recount_count == 0" groups="stock_count.group_stock_count_manager" confirm="Las líneas en reconteo se aprobarán con el primer conteo, sin segundo conteo. ¿Continuar?"/>
@@ -166,7 +166,7 @@
                 <separator/>
                 <filter name="draft" string="Borrador" domain="[('state', '=', 'draft')]"/>
                 <filter name="active" string="Activos" domain="[('state', 'in', ('ready', 'counting', 'review'))]"/>
-                <filter name="done" string="Aplicados" domain="[('state', '=', 'done')]"/>
+                <filter name="done" string="Validados" domain="[('state', '=', 'done')]"/>
                 <separator/>
                 <filter name="date_planned" string="Fecha planificada" date="date_planned"/>
                 <group expand="0" string="Agrupar por">
@@ -187,7 +187,7 @@
         <field name="context">{'search_default_active': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Creá el primer recuento</p>
-            <p>Elegí ubicaciones y productos, asigná contadores y confirmá: el stock teórico se congela y queda bloqueado hasta aplicar.</p>
+            <p>Elegí ubicaciones y productos, asigná contadores y confirmá: el stock teórico se congela y queda bloqueado hasta validar.</p>
         </field>
     </record>
 </odoo>

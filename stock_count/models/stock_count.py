@@ -9,7 +9,7 @@ STATES = [
     ("ready", "Confirmado"),
     ("counting", "En conteo"),
     ("review", "En revisión"),
-    ("done", "Aplicado"),
+    ("done", "Validado"),
     ("cancel", "Cancelado"),
 ]
 ACTIVE_STATES = ("ready", "counting", "review")
@@ -531,6 +531,7 @@ class StockCount(models.Model):
                     qty=count.recount_threshold_qty,
                 ),
             )
+        (self - already)._try_auto_validate()
         return True
 
     def action_approve_all(self):
@@ -554,6 +555,7 @@ class StockCount(models.Model):
                 "params": {"message": message, "type": "info"},
             }
         to_approve.action_approve()
+        self._try_auto_validate()
         return True
 
     def action_accept_first_counts(self):
@@ -572,6 +574,7 @@ class StockCount(models.Model):
                     n=len(lines),
                 ),
             )
+        self._try_auto_validate()
         return True
 
     def action_approve_within_tolerance(self):
@@ -583,6 +586,7 @@ class StockCount(models.Model):
                 if count._line_within_tolerance(line):
                     to_approve |= line
             to_approve.action_approve()
+        self._try_auto_validate()
         return True
 
     def _check_can_apply(self):
@@ -597,7 +601,7 @@ class StockCount(models.Model):
                     by_state[line.state] = by_state.get(line.state, 0) + 1
                 raise UserError(
                     self.env._(
-                        "No se puede aplicar: hay líneas sin resolver (%s). Aprobá, omití o "
+                        "No se puede validar: hay líneas sin resolver (%s). Aprobá, omití o "
                         "esperá los reconteos pendientes.",
                         ", ".join(f"{n} {labels[s].lower()}" for s, n in by_state.items()),
                     )
@@ -612,16 +616,33 @@ class StockCount(models.Model):
         moved.write({"moved_during_count": True})
         return moved
 
+    def _try_auto_validate(self):
+        """Con todas las líneas aprobadas u omitidas, el recuento se valida solo.
+
+        Si hay stock movido desde el snapshot, action_apply marca las líneas y deja la
+        decisión al supervisor ('Validar igualmente').
+        """
+        for count in self.filtered(lambda count: count.state == "review"):
+            unresolved = count.line_ids.filtered(
+                lambda line: line.state in ("pending", "recount", "counted")
+            )
+            if unresolved or not count.line_ids:
+                continue
+            count.sudo().action_apply()
+        return True
+
     def action_apply(self):
-        """En revisión → Aplicado: genera los ajustes con el motor nativo y libera el bloqueo."""
-        self._check_state(("review",), self.env._("aplicar"))
+        """En revisión → Validado: genera los ajustes con el motor nativo y libera el bloqueo."""
+        if all(count.state == "done" for count in self):
+            return True  # ya validado (por ejemplo, solo al aprobar la última línea)
+        self._check_state(("review",), self.env._("validar"))
         self._check_can_apply()
         force = self.env.context.get("stock_count_force_apply")
         for count in self:
             moved = count._detect_moved_lines()
             if moved and not force:
                 # No se lanza excepción: la marca en las líneas debe persistir para que el
-                # supervisor las vea y decida (reconteo o "Aplicar igualmente").
+                # supervisor las vea y decida (reconteo o "Validar igualmente").
                 detail = "\n".join(
                     f"- {line.product_id.display_name} · {line.location_id.complete_name}: "
                     f"teórico {line.qty_theoretical}, ahora {line.qty_current}"
@@ -629,7 +650,7 @@ class StockCount(models.Model):
                 )
                 message = self.env._(
                     "El stock de %(n)s líneas se movió después del snapshot:\n%(detail)s\n\n"
-                    "Revisá esas líneas (podés pedir reconteo) o usá 'Aplicar igualmente' "
+                    "Revisá esas líneas (podés pedir reconteo) o usá 'Validar igualmente' "
                     "para tomar la cantidad contada como cantidad final.",
                     n=len(moved),
                     detail=detail,
@@ -655,7 +676,7 @@ class StockCount(models.Model):
             count.message_post(
                 subtype_xmlid="mail.mt_note",
                 body=self.env._(
-                    "Recuento aplicado. %(moves)s ajustes de inventario generados, "
+                    "Recuento validado. %(moves)s ajustes de inventario generados, "
                     "%(ok)s líneas sin diferencia. Bloqueo de movimientos liberado.",
                     moves=len(adjusted),
                     ok=len(to_apply) - len(adjusted),

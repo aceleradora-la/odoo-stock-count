@@ -48,7 +48,7 @@
                 <filter name="moved" string="Movidas durante el conteo" domain="[('moved_during_count', '=', True)]"/>
                 <separator/>
                 <filter name="active_counts" string="Recuentos activos" domain="[('count_state', 'in', ('ready', 'counting', 'review'))]"/>
-                <filter name="applied_counts" string="Recuentos aplicados" domain="[('count_state', '=', 'done')]"/>
+                <filter name="applied_counts" string="Recuentos validados" domain="[('count_state', '=', 'done')]"/>
                 <separator/>
                 <filter name="count_date" string="Fecha del recuento" date="count_date"/>
                 <group expand="0" string="Agrupar por">
@@ -98,8 +98,8 @@
         <field name="search_view_id" ref="stock_count_line_view_search"/>
         <field name="context">{'search_default_applied_counts': 1, 'search_default_with_diff': 1, 'search_default_group_location': 1}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Todavía no hay recuentos aplicados</p>
-            <p>Cuando se apliquen recuentos, acá vas a poder cruzar diferencias por ubicación, producto, categoría, motivo, contador y mes.</p>
+            <p class="o_view_nocontent_smiling_face">Todavía no hay recuentos validados</p>
+            <p>Cuando se validen recuentos, acá vas a poder cruzar diferencias por ubicación, producto, categoría, motivo, contador y mes.</p>
         </field>
     </record>
 

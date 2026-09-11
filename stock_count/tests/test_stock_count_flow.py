@@ -237,9 +237,9 @@ class TestStockCountFlow(TransactionCase):
         paint_b.reason_id = self.env.ref("stock_count.reason_breakage")
 
         count.action_approve_all()
-        self.assertTrue(all(line.state == "approved" for line in count.line_ids))
+        self.assertEqual(count.state, "done", "con todo aprobado, se valida solo")
 
-        count.action_apply()
+        count.action_apply()  # idempotente
         self.assertEqual(count.state, "done")
         self.assertTrue(count.date_end)
         self.assertTrue(all(line.state == "applied" for line in count.line_ids))
@@ -280,10 +280,9 @@ class TestStockCountFlow(TransactionCase):
         roller = self._line(count, self.roller)
         self.assertEqual(roller.state, "recount")
         roller.write({"qty_recount": 41.0})  # +2,5 %: dentro de la tolerancia de 5 %
-        self.assertEqual(roller.state, "approved", "tras el reconteo se aprueba sola")
         self.assertEqual(count.pending_count, 0)
-        count.action_apply()
-        self.assertEqual(count.state, "done")
+        self.assertEqual(count.state, "done", "última aprobación: se valida solo")
+        self.assertEqual(roller.state, "applied")
         self.assertEqual(self._qty(self.roller, self.shelf), 41.0)
 
     def test_accept_first_count_without_recount(self):
@@ -308,12 +307,11 @@ class TestStockCountFlow(TransactionCase):
         self.assertEqual(result.get("tag"), "display_notification", "nada contado sin aprobar")
         count.action_accept_first_counts()
         roller = self._line(count, self.roller)
-        self.assertEqual(roller.state, "approved")
         self.assertEqual(roller.qty_final, 52.0, "vale el primer conteo")
         self.assertIn("aceptado", roller.note)
         self.assertEqual(count.recount_count, 0)
-        count.action_apply()
-        self.assertEqual(count.state, "done")
+        self.assertEqual(count.state, "done", "sin nada pendiente, se validó solo")
+        self.assertEqual(roller.state, "applied")
         self.assertEqual(self._qty(self.roller, self.shelf), 52.0)
 
     def test_within_tolerance_is_auto_approved(self):
@@ -344,12 +342,8 @@ class TestStockCountFlow(TransactionCase):
         self._line(count, self.screw).write({"qty_counted": 60.0})  # −40 %
         self._line(count, self.tape).write({"qty_counted": 7.0})  # teórico cero
         count.action_to_review()
-        self.assertTrue(
-            all(line.state == "approved" for line in count.line_ids),
-            "con 100 % no queda nada esperando aprobación",
-        )
-        count.action_apply()
-        self.assertEqual(count.state, "done")
+        self.assertEqual(count.state, "done", "con 100 % no queda nada esperando: se valida")
+        self.assertTrue(all(line.state == "applied" for line in count.line_ids))
         self.assertEqual(self._qty(self.tape, self.shelf), 7.0)
 
     def test_warehouse_change_drops_foreign_locations(self):

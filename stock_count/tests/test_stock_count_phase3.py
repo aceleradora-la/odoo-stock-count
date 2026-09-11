@@ -346,10 +346,10 @@ class TestStockCountPhase3(Phase3Common, TransactionCase):
         result = Line.counter_finish(count.id, False, True)
         self.assertTrue(result["done"])
         self.assertEqual(result["zeroed"], 2)
-        self.assertEqual(result["state"], "review")
+        self.assertEqual(result["state"], "done", "tolerancia 100 %: aprobado y validado solo")
         self.assertEqual(result["recount"], 0, "tolerancia 100 %: nada a recontar")
         roller = self._line(count, self.roller)
-        self.assertEqual((roller.qty_counted, roller.state), (0.0, "approved"))
+        self.assertEqual((roller.qty_counted, roller.state), (0.0, "applied"))
         self.assertEqual(roller.counted_by_id, self.counter)
         self.assertEqual(count.pending_count, 0)
 
