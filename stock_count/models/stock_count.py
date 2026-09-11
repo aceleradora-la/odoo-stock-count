@@ -497,8 +497,8 @@ class StockCount(models.Model):
         Se dispara sola al cargar la última línea; el botón queda para cuando se quiere
         pasar a revisión omitiendo lo que falta.
         """
-        already = self.filtered(lambda count: count.state == "review")
-        self._check_state(("counting", "review"), self.env._("enviar a revisión"))
+        already = self.filtered(lambda count: count.state in ("review", "done"))
+        self._check_state(("counting", "review", "done"), self.env._("enviar a revisión"))
         for count in self - already:
             pending = count.line_ids.filtered(lambda line: line.state in ("pending", "recount"))
             if pending:
@@ -536,7 +536,9 @@ class StockCount(models.Model):
 
     def action_approve_all(self):
         """Aprueba todas las líneas contadas que no estén en reconteo."""
-        self._check_state(("review",), self.env._("aprobar"))
+        self._check_state(("review", "done"), self.env._("aprobar"))
+        if all(count.state == "done" for count in self):
+            return True
         to_approve = self.line_ids.filtered(lambda line: line.state == "counted")
         if not to_approve:
             recount = len(self.line_ids.filtered(lambda line: line.state == "recount"))
@@ -560,7 +562,7 @@ class StockCount(models.Model):
 
     def action_accept_first_counts(self):
         """Da por bueno el primer conteo de todas las líneas en reconteo."""
-        self._check_state(("review",), self.env._("aceptar"))
+        self._check_state(("review", "done"), self.env._("aceptar"))
         for count in self:
             lines = count.line_ids.filtered(lambda line: line.state == "recount")
             if not lines:
@@ -578,7 +580,7 @@ class StockCount(models.Model):
         return True
 
     def action_approve_within_tolerance(self):
-        self._check_state(("review",), self.env._("aprobar"))
+        self._check_state(("review", "done"), self.env._("aprobar"))
         for count in self:
             counted = count.line_ids.filtered(lambda line: line.state == "counted")
             to_approve = self.env["stock.count.line"]
