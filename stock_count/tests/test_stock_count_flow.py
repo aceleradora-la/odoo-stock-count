@@ -328,7 +328,7 @@ class TestStockCountFlow(TransactionCase):
             ],
         )
         count.action_to_review()
-        self.assertEqual(self._line(count, self.screw).state, "approved")
+        self.assertEqual(self._line(count, self.screw).state, "applied", "aprobada y validada")
 
     def test_tolerance_100_approves_everything_including_zero_theoretical(self):
         count = self._create_count(
