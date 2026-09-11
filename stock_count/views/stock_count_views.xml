@@ -36,6 +36,7 @@
                             <field name="company_id" invisible="1"/>
                             <field name="currency_id" invisible="1"/>
                             <field name="is_manager" invisible="1"/>
+                            <field name="has_recount" invisible="1"/>
                             <field name="warehouse_id" readonly="state != 'draft'"/>
                             <field name="location_ids" widget="many2many_tags" readonly="state != 'draft'" options="{'no_create': True}"/>
                             <field name="include_children" readonly="state != 'draft'"/>
@@ -83,7 +84,8 @@
                                     <field name="qty_theoretical" invisible="blind and not parent.is_manager"/>
                                     <field name="qty_counted" readonly="state not in ('pending', 'counted') or parent.state not in ('ready', 'counting', 'review')"/>
                                     <field name="counted_by_id" optional="show" readonly="1"/>
-                                    <field name="qty_recount" readonly="state != 'recount'" optional="show"/>
+                                    <field name="qty_recount" readonly="state != 'recount'" column_invisible="not parent.has_recount"/>
+                                    <field name="recounted_by_id" readonly="1" column_invisible="not parent.has_recount"/>
                                     <field name="qty_diff" invisible="blind and not parent.is_manager" optional="show"/>
                                     <field name="diff_pct" invisible="blind and not parent.is_manager" optional="hide"/>
                                     <field name="diff_value" invisible="blind and not parent.is_manager" optional="hide"/>

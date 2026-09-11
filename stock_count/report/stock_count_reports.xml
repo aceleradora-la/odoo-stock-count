@@ -134,7 +134,7 @@
                                     <th>Lote</th>
                                     <th class="text-end">Teórico</th>
                                     <th class="text-end">1er conteo</th>
-                                    <th class="text-end">2do conteo</th>
+                                    <th class="text-end" t-if="doc.has_recount">2do conteo</th>
                                     <th class="text-end">Diferencia</th>
                                     <th class="text-end">%</th>
                                     <th class="text-end">Valor</th>
@@ -150,7 +150,7 @@
                                     <td><span t-out="line.lot_id.name or ''"/></td>
                                     <td class="text-end"><span t-out="line.qty_theoretical"/></td>
                                     <td class="text-end"><span t-out="line.qty_counted"/></td>
-                                    <td class="text-end"><span t-out="line.qty_recount if line.recounted_at else ''"/></td>
+                                    <td class="text-end" t-if="doc.has_recount"><span t-out="line.qty_recount if line.recounted_at else ''"/></td>
                                     <td class="text-end" t-att-style="'color:#a02532' if line.qty_diff &lt; 0 else 'color:#146c43'"><strong t-out="'%+.2f' % line.qty_diff"/></td>
                                     <td class="text-end"><span t-out="'%+.1f' % line.diff_pct if line.qty_theoretical else '—'"/></td>
                                     <td class="text-end"><span t-out="line.diff_value" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td>
@@ -160,7 +160,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="6" class="text-end"><strong>Total</strong></td>
+                                    <td t-att-colspan="6 if doc.has_recount else 5" class="text-end"><strong>Total</strong></td>
                                     <td class="text-end"><strong t-out="'%+.2f' % sum(data['with_diff'].mapped('qty_diff'))"/></td>
                                     <td></td>
                                     <td class="text-end"><strong t-out="data['total_value']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td>

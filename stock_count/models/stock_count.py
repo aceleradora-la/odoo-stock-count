@@ -165,6 +165,11 @@ class StockCount(models.Model):
     )
     progress = fields.Float(string="Avance (%)", compute="_compute_line_stats", store=True)
     moved_count = fields.Integer(compute="_compute_line_stats", store=True)
+    has_recount = fields.Boolean(
+        compute="_compute_line_stats",
+        store=True,
+        help="Alguna línea pidió o tuvo un segundo conteo: se muestran las columnas del reconteo.",
+    )
     move_count = fields.Integer(compute="_compute_move_count")
     currency_id = fields.Many2one(related="company_id.currency_id")
     is_manager = fields.Boolean(compute="_compute_is_manager")
@@ -192,6 +197,7 @@ class StockCount(models.Model):
         "line_ids.diff_value",
         "line_ids.qty_final",
         "line_ids.moved_during_count",
+        "line_ids.recounted_at",
     )
     def _compute_line_stats(self):
         for count in self:
@@ -207,6 +213,7 @@ class StockCount(models.Model):
             count.diff_value = sum(with_diff.mapped("diff_value"))
             count.progress = 100.0 * len(counted) / len(lines) if lines else 0.0
             count.moved_count = len(lines.filtered("moved_during_count"))
+            count.has_recount = any(line.state == "recount" or line.recounted_at for line in lines)
             effective = counted.filtered(lambda line: line.state != "skipped")
             count.accuracy = (
                 100.0 * (len(effective) - len(with_diff)) / len(effective) if effective else 0.0

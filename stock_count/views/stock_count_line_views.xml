@@ -14,7 +14,8 @@
                 <field name="qty_theoretical" readonly="1" invisible="blind and not is_manager"/>
                 <field name="qty_counted" readonly="state not in ('pending', 'counted') or count_state not in ('ready', 'counting', 'review')"/>
                 <field name="counted_by_id" optional="show" readonly="1"/>
-                <field name="qty_recount" readonly="state != 'recount'" optional="show"/>
+                <field name="qty_recount" readonly="state != 'recount'" optional="hide"/>
+                <field name="recounted_by_id" readonly="1" optional="hide"/>
                 <field name="qty_diff" invisible="blind and not is_manager" optional="show"/>
                 <field name="diff_pct" invisible="blind and not is_manager" optional="hide"/>
                 <field name="diff_value" invisible="blind and not is_manager" optional="hide"/>
