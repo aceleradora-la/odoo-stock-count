@@ -102,6 +102,11 @@
                 <button t-if="state.locationId" class="btn btn-primary" t-on-click="nextLocation">
                     Siguiente ubicación <i class="fa fa-arrow-right"/>
                 </button>
+                <button t-if="state.countId" class="btn btn-success o_stock_count_counter_finish" t-on-click="() => this.finish(!!state.locationId)">
+                    <i class="fa fa-check me-1"/>
+                    <t t-if="state.locationId">Terminar ubicación</t>
+                    <t t-else="">Terminar conteo</t>
+                </button>
             </div>
         </div>
     </t>
