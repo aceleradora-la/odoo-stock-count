@@ -6,6 +6,7 @@ import { useBus, useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { scanBarcode } from "@web/core/barcode/barcode_dialog";
 import { isBarcodeScannerSupported } from "@web/core/barcode/barcode_video_scanner";
+import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 
 /**
  * Vista móvil del contador.
@@ -29,6 +30,7 @@ export class StockCountCounter extends Component {
         this.action = useService("action");
         this.notification = useService("notification");
         this.barcode = useService("barcode");
+        this.dialog = useService("dialog");
         this.scanInput = useRef("scanInput");
         this.cameraSupported = isBarcodeScannerSupported();
         useBus(this.barcode.bus, "barcode_scanned", (ev) => this.handleScan(ev.detail.barcode));
@@ -120,6 +122,68 @@ export class StockCountCounter extends Component {
 
     backToLocations() {
         this.state.locationId = false;
+    }
+
+    // ------------------------------------------------------------------
+    // Terminar
+    // ------------------------------------------------------------------
+    async finish(locationOnly) {
+        if (!this.state.countId) {
+            return;
+        }
+        const locationId = locationOnly ? this.state.locationId : false;
+        const args = [this.state.countId, locationId || false];
+        const probe = await this.orm.call("stock.count.line", "counter_finish", [...args, false]);
+        if (probe.done) {
+            return this._afterFinish(probe, locationOnly);
+        }
+        const body = locationOnly
+            ? _t(
+                  "Hay %s productos sin cantidad en esta ubicación. Se registrarán como 0 (no hay stock). ¿Terminar la ubicación?",
+                  probe.pending
+              )
+            : _t(
+                  "Hay %s productos sin cantidad. Se registrarán como 0 (no hay stock). ¿Terminar el conteo?",
+                  probe.pending
+              );
+        this.dialog.add(ConfirmationDialog, {
+            title: locationOnly ? _t("Terminar ubicación") : _t("Terminar conteo"),
+            body,
+            confirmLabel: _t("Sí, terminar"),
+            cancelLabel: _t("Volver"),
+            confirm: async () => {
+                const result = await this.orm.call("stock.count.line", "counter_finish", [
+                    ...args,
+                    true,
+                ]);
+                await this._afterFinish(result, locationOnly);
+            },
+        });
+    }
+
+    async _afterFinish(result, locationOnly) {
+        await this.load();
+        this.state.locationId = false;
+        if (locationOnly && result.remaining) {
+            this.notification.add(_t("Ubicación terminada."), { type: "success" });
+            return;
+        }
+        if (result.recount) {
+            this.notification.add(
+                _t(
+                    "Conteo terminado. El recuento está en revisión y tenés %s líneas para recontar.",
+                    result.recount
+                ),
+                { type: "warning", sticky: true }
+            );
+        } else if (result.state === "review") {
+            this.notification.add(_t("Conteo terminado y enviado a revisión."), {
+                type: "success",
+                sticky: true,
+            });
+        } else {
+            this.notification.add(_t("Tus líneas quedaron contadas."), { type: "success" });
+        }
     }
 
     nextLocation() {

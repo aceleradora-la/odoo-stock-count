@@ -333,6 +333,39 @@ class TestStockCountPhase3(Phase3Common, TransactionCase):
     # ------------------------------------------------------------------
     # Datos para la vista móvil
     # ------------------------------------------------------------------
+    def test_counter_finish_zeroes_pending_and_sends_to_review(self):
+        count = self._create_count(auto_approve_tolerance_pct=100.0)
+        count.action_confirm()
+        Line = self.Line.with_user(self.counter)
+        screw = self._line(count, self.screw)
+        Line.browse(screw.id).counter_set_quantity(100.0)
+        self.assertEqual(count.state, "counting", "la primera cantidad inicia el conteo")
+        probe = Line.counter_finish(count.id, False, False)
+        self.assertFalse(probe["done"])
+        self.assertEqual(probe["pending"], 2, "rodillo y pintura sin cantidad")
+        result = Line.counter_finish(count.id, False, True)
+        self.assertTrue(result["done"])
+        self.assertEqual(result["zeroed"], 2)
+        self.assertEqual(result["state"], "review")
+        self.assertEqual(result["recount"], 0, "tolerancia 100 %: nada a recontar")
+        roller = self._line(count, self.roller)
+        self.assertEqual((roller.qty_counted, roller.state), (0.0, "approved"))
+        self.assertEqual(roller.counted_by_id, self.counter)
+        self.assertEqual(count.pending_count, 0)
+
+    def test_counter_finish_location_only_keeps_other_locations(self):
+        count = self._create_count(location_ids=[(6, 0, (self.shelf | self.other_shelf).ids)])
+        count.action_confirm()
+        count.action_start()
+        Line = self.Line.with_user(self.counter)
+        result = Line.counter_finish(count.id, self.shelf.id, True)
+        self.assertTrue(result["done"])
+        self.assertEqual(result["zeroed"], 3)
+        self.assertEqual(result["remaining"], 1, "el pasillo B sigue pendiente")
+        self.assertEqual(result["state"], "counting")
+        shelf_lines = count.line_ids.filtered(lambda line: line.location_id == self.shelf)
+        self.assertTrue(all(line.state == "counted" for line in shelf_lines))
+
     def test_counter_get_data_and_set_quantity(self):
         count = self._create_count()
         count.action_confirm()

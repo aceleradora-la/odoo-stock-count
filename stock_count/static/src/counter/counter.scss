@@ -135,14 +135,20 @@
         position: sticky;
         bottom: 0;
         display: flex;
+        flex-wrap: wrap;
         gap: 8px;
         padding: 10px 16px;
         background: var(--o-view-background-color, #fff);
         border-top: 1px solid var(--border-color, #dee2e6);
         margin-top: auto;
         button {
-            flex: 1;
+            flex: 1 1 40%;
             padding: 10px;
+        }
+        .o_stock_count_counter_finish {
+            flex-basis: 100%;
+            padding: 12px;
+            font-weight: 600;
         }
     }
 }

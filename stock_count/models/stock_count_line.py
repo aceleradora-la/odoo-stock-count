@@ -526,6 +526,34 @@ class StockCountLine(models.Model):
         current = self.qty_recount if self.state == "recount" else self.qty_counted
         return self.counter_set_quantity(current + delta)
 
+    @api.model
+    def counter_finish(self, count_id, location_id=False, zero_pending=False):
+        """Terminar el conteo (de una ubicación o del recuento).
+
+        Las líneas que el contador no tocó quedan en 0 cuando confirma: en un conteo
+        ciego, "no cargué nada" significa "no hay". Con todo contado, el recuento pasa
+        solo a revisión. Los reconteos pendientes no se cierran en cero: hay que
+        hacerlos.
+        """
+        domain = self._counter_domain(count_id) + [("state", "=", "pending")]
+        if location_id:
+            domain.append(("location_id", "=", location_id))
+        pending = self.search(domain)
+        if pending and not zero_pending:
+            return {"pending": len(pending), "done": False}
+        pending.write({"qty_counted": 0.0})
+        count = self.env["stock.count"].sudo().browse(count_id)
+        recount = self.search(self._counter_domain(count_id) + [("state", "=", "recount")])
+        remaining = self.search(self._counter_domain(count_id) + [("state", "=", "pending")])
+        return {
+            "pending": 0,
+            "done": True,
+            "zeroed": len(pending),
+            "state": count.state,
+            "recount": len(recount),
+            "remaining": len(remaining),
+        }
+
     # ------------------------------------------------------------------
     # Acciones del supervisor
     # ------------------------------------------------------------------
