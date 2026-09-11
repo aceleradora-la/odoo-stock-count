@@ -1,12 +1,21 @@
 .o_stock_count_barcode_card {
-    padding: 8px 16px 16px;
+    margin-top: 12px;
     .o_stock_count_barcode_button {
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 14px;
-        font-size: 16px;
+        padding: 16px;
+        font-size: 17px;
         font-weight: 600;
+        color: #fff;
+        background: #0f6e63;
+        border: 0;
+        border-radius: 6px;
+        .badge {
+            background: #fff;
+            color: #0f6e63;
+            font-size: 14px;
+        }
     }
 }
