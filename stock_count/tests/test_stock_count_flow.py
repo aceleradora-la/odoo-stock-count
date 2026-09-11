@@ -262,6 +262,30 @@ class TestStockCountFlow(TransactionCase):
         self.assertAlmostEqual(count.diff_value, 1 * 800.0 - 3 * 12900.0)
         self.assertAlmostEqual(count.accuracy, 50.0)
 
+    def test_last_count_moves_to_review_and_recount_auto_approves(self):
+        count = self._create_count(auto_approve_tolerance_pct=5.0)
+        count.action_confirm()
+        count.action_start()
+        self._count_all(
+            count,
+            [
+                (self.screw, None, 100.0),
+                (self.roller, None, 52.0),  # +30 % → reconteo
+                (self.paint, self.lot_a, 36.0),
+            ],
+        )
+        self.assertEqual(count.state, "counting", "todavía falta una línea")
+        self._line(count, self.paint, self.lot_b).write({"qty_counted": 12.0})
+        self.assertEqual(count.state, "review", "la última línea manda a revisión sola")
+        roller = self._line(count, self.roller)
+        self.assertEqual(roller.state, "recount")
+        roller.write({"qty_recount": 41.0})  # +2,5 %: dentro de la tolerancia de 5 %
+        self.assertEqual(roller.state, "approved", "tras el reconteo se aprueba sola")
+        self.assertEqual(count.pending_count, 0)
+        count.action_apply()
+        self.assertEqual(count.state, "done")
+        self.assertEqual(self._qty(self.roller, self.shelf), 41.0)
+
     def test_within_tolerance_is_auto_approved(self):
         count = self._create_count(auto_approve_tolerance_pct=1.0)
         count.action_confirm()
