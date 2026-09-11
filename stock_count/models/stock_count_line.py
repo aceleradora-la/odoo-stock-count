@@ -260,6 +260,8 @@ class StockCountLine(models.Model):
                     )
                 )
                 super(StockCountLine, auto).write({"state": "approved"})
+            # Contar la primera línea de un recuento confirmado lo pone en conteo.
+            self.count_id.filtered(lambda count: count.state == "ready").sudo().action_start()
             # Cuando se carga la última línea, el recuento pasa solo a revisión.
             for count in self.count_id.filtered(lambda count: count.state == "counting"):
                 if not count.line_ids.filtered(lambda line: line.state in ("pending", "recount")):
@@ -329,7 +331,7 @@ class StockCountLine(models.Model):
     def _counter_domain(self, count_id=False):
         user = self.env.user
         domain = [
-            ("count_state", "in", ("counting", "review")),
+            ("count_state", "in", ("ready", "counting", "review")),
             ("state", "in", ("pending", "recount", "counted")),
             "|",
             "|",
@@ -372,7 +374,7 @@ class StockCountLine(models.Model):
         user = self.env.user
         counts = self.env["stock.count"].search(
             [
-                ("state", "in", ("counting", "review")),
+                ("state", "in", ("ready", "counting", "review")),
                 "|",
                 ("counter_ids", "in", [user.id]),
                 ("user_id", "=", user.id),

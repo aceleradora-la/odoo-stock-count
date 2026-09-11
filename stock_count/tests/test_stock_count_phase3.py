@@ -363,9 +363,9 @@ class TestStockCountPhase3(Phase3Common, TransactionCase):
             Line.browse(paint_id).counter_set_quantity(1.0)
 
         # En revisión, solo las líneas en reconteo vuelven a aparecer
+        self._line(count, self.screw).write({"qty_counted": 80.0})  # −20 % → reconteo
         for line in count.line_ids.filtered(lambda line: line.state == "pending"):
             line.write({"qty_counted": line.qty_theoretical})
-        self._line(count, self.screw).write({"qty_counted": 80.0})  # −20 % → reconteo
         count.action_to_review()
         data = Line.counter_get_data()
         self.assertEqual(len(data["lines"]), 1)

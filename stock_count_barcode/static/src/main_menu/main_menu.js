@@ -13,7 +13,7 @@ import { _t } from "@web/core/l10n/translation";
  * ahí. Al montarse la pantalla, el botón se inserta debajo del último botón grande
  * ("Contar inventario"); si la estructura no se reconoce, se agrega al final de la
  * pantalla. Si nada de esto es posible, la app sigue funcionando y queda el menú
- * "Recuentos" de la barra superior.
+ * Contar de Inventario.
  */
 const CANDIDATE_ACTIONS = ["stock_barcode_main_menu", "stock_barcode.main_menu", "main_menu"];
 
