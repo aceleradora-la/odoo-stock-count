@@ -8,9 +8,7 @@
     "website": "https://github.com/aceleradora-la/odoo-stock-count",
     "license": "AGPL-3",
     "depends": ["stock_count", "stock_barcode"],
-    "data": [
-        "views/stock_count_barcode_menus.xml",
-    ],
+    "data": [],
     "assets": {
         "web.assets_backend": [
             "stock_count_barcode/static/src/main_menu/main_menu.js",

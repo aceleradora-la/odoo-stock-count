@@ -50,7 +50,7 @@
             <div t-elif="!state.lines.length" class="o_stock_count_counter_empty">
                 <i class="fa fa-check-circle-o fa-3x text-success"/>
                 <p>No tenés líneas pendientes de conteo.</p>
-                <p class="text-muted">Cuando el supervisor inicie un recuento donde sos contador, van a aparecer acá.</p>
+                <p class="text-muted">Cuando el supervisor confirme un recuento donde sos contador, van a aparecer acá.</p>
             </div>
 
             <!-- Lista de ubicaciones -->

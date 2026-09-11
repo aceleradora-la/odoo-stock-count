@@ -205,6 +205,7 @@ class TestStockCountFlow(TransactionCase):
         count.action_start()
         with self.assertRaises(UserError, msg="no se puede revisar con líneas pendientes"):
             count.action_to_review()
+        self.assertFalse(count.has_recount, "sin reconteos no se muestran sus columnas")
         self._count_all(
             count,
             [
@@ -214,7 +215,6 @@ class TestStockCountFlow(TransactionCase):
                 (self.paint, self.lot_b, 9.0),  # −25 % → reconteo
             ],
         )
-        self.assertFalse(count.has_recount, "sin reconteos no se muestran sus columnas")
         count.action_to_review()
         self.assertEqual(count.state, "review")
         screw = self._line(count, self.screw)
