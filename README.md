@@ -7,7 +7,7 @@ ajustes que generó.
 
 | | |
 |---|---|
-| **Módulos** | `stock_count` · `stock_count_barcode` (Enterprise, opcional) · `stock_count_cycle` (opcional) |
+| **Módulos** | `stock_count` · `stock_count_cycle` (conteo cíclico) · `stock_count_barcode` (app Código de barras de Enterprise, se instala solo) |
 | **Licencia** | AGPL-3 |
 | **Versiones** | 17.0, 18.0, 19.0 — Community y Enterprise (ver [Ramas](#ramas)) |
 
@@ -66,7 +66,7 @@ Agregar la carpeta al `addons_path`, actualizar la lista de aplicaciones e insta
 | 3 ✅ | Roles y revisión: vista de contador móvil, ciego, reconteo, motivos (18.0 y 19.0) |
 | 4 ✅ | Reportes: hoja de conteo, informe de diferencias, Excel, análisis (18.0 y 19.0) |
 | 5 | Retroport a 17.0 |
-| 6 | `stock_count_barcode`: puente con la app Código de barras de Enterprise |
+| 6 ⏳ | Escaneo con lector físico, cámara y nomenclatura GS1 en la vista Contar (Community y Enterprise); `stock_count_barcode`: tarjeta y menú en la app Código de barras de Enterprise, pendiente de validar en una base Enterprise |
 | 7 ✅ | `stock_count_cycle`: reglas de conteo cíclico que crean recuentos automáticamente y asignan la tarea al responsable (18.0 y 19.0) |
 
 ## Autor
