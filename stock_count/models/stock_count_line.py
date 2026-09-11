@@ -46,6 +46,7 @@ class StockCountLine(models.Model):
 
     product_id = fields.Many2one(
         "product.product",
+        string="Producto",
         required=True,
         check_company=True,
         domain="[('type', '=', 'consu'), ('is_storable', '=', True)]",
@@ -53,6 +54,7 @@ class StockCountLine(models.Model):
     product_uom_id = fields.Many2one(related="product_id.uom_id", string="UdM")
     location_id = fields.Many2one(
         "stock.location",
+        string="Ubicación",
         required=True,
         check_company=True,
         domain="[('usage', '=', 'internal')]",
@@ -573,6 +575,26 @@ class StockCountLine(models.Model):
                     )
                 )
         self.write({"state": "approved"})
+        return True
+
+    def action_accept_first_count(self):
+        """El supervisor da por bueno el primer conteo: la línea pasa a aprobada sin
+        segundo conteo. Queda registrado quién lo decidió."""
+        self._check_manager()
+        for line in self:
+            if line.state != "recount":
+                raise UserError(
+                    self.env._(
+                        "Solo se acepta el primer conteo de una línea en reconteo (%s).",
+                        line.product_id.display_name,
+                    )
+                )
+        self.write(
+            {
+                "state": "approved",
+                "note": self.env._("1er conteo aceptado sin recontar por %s", self.env.user.name),
+            }
+        )
         return True
 
     def action_request_recount(self):
