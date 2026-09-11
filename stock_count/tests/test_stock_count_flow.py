@@ -286,6 +286,36 @@ class TestStockCountFlow(TransactionCase):
         self.assertEqual(count.state, "done")
         self.assertEqual(self._qty(self.roller, self.shelf), 41.0)
 
+    def test_accept_first_count_without_recount(self):
+        count = self._create_count()
+        count.action_confirm()
+        count.action_start()
+        self._count_all(
+            count,
+            [
+                (self.screw, None, 100.0),
+                (self.roller, None, 52.0),  # +30 % → reconteo
+                (self.paint, self.lot_a, 36.0),
+                (self.paint, self.lot_b, 9.0),  # −25 % → reconteo
+            ],
+        )
+        self.assertEqual(count.state, "review")
+        self.assertEqual(count.counted_count, 4, "las líneas en reconteo están contadas")
+        self.assertEqual(count.pending_count, 0)
+        self.assertEqual(count.recount_count, 2)
+        self.assertEqual(count.diff_count, 2)
+        result = count.action_approve_all()
+        self.assertEqual(result.get("tag"), "display_notification", "nada contado sin aprobar")
+        count.action_accept_first_counts()
+        roller = self._line(count, self.roller)
+        self.assertEqual(roller.state, "approved")
+        self.assertEqual(roller.qty_final, 52.0, "vale el primer conteo")
+        self.assertIn("aceptado", roller.note)
+        self.assertEqual(count.recount_count, 0)
+        count.action_apply()
+        self.assertEqual(count.state, "done")
+        self.assertEqual(self._qty(self.roller, self.shelf), 52.0)
+
     def test_within_tolerance_is_auto_approved(self):
         count = self._create_count(auto_approve_tolerance_pct=1.0)
         count.action_confirm()

@@ -168,6 +168,9 @@ class StockCount(models.Model):
     )
     progress = fields.Float(string="Avance (%)", compute="_compute_line_stats", store=True)
     moved_count = fields.Integer(compute="_compute_line_stats", store=True)
+    recount_count = fields.Integer(
+        string="Por recontar", compute="_compute_line_stats", store=True
+    )
     has_recount = fields.Boolean(
         compute="_compute_line_stats",
         store=True,
@@ -205,13 +208,15 @@ class StockCount(models.Model):
     def _compute_line_stats(self):
         for count in self:
             lines = count.line_ids
-            counted = lines.filtered(lambda line: line.state not in ("pending", "recount"))
+            # Una línea en reconteo ya tiene un primer conteo: cuenta como contada.
+            counted = lines.filtered(lambda line: line.state != "pending")
             with_diff = counted.filtered(
                 lambda line: line.state != "skipped" and not line._is_diff_zero()
             )
             count.line_count = len(lines)
             count.counted_count = len(counted)
             count.pending_count = len(lines) - len(counted)
+            count.recount_count = len(lines.filtered(lambda line: line.state == "recount"))
             count.diff_count = len(with_diff)
             count.diff_value = sum(with_diff.mapped("diff_value"))
             count.progress = 100.0 * len(counted) / len(lines) if lines else 0.0
@@ -531,7 +536,42 @@ class StockCount(models.Model):
     def action_approve_all(self):
         """Aprueba todas las líneas contadas que no estén en reconteo."""
         self._check_state(("review",), self.env._("aprobar"))
-        self.line_ids.filtered(lambda line: line.state == "counted").action_approve()
+        to_approve = self.line_ids.filtered(lambda line: line.state == "counted")
+        if not to_approve:
+            recount = len(self.line_ids.filtered(lambda line: line.state == "recount"))
+            message = (
+                self.env._(
+                    "No hay líneas contadas sin aprobar. Hay %s líneas en reconteo: esperá el "
+                    "segundo conteo o usá 'Aceptar 1er conteo'.",
+                    recount,
+                )
+                if recount
+                else self.env._("No hay líneas contadas sin aprobar.")
+            )
+            return {
+                "type": "ir.actions.client",
+                "tag": "display_notification",
+                "params": {"message": message, "type": "info"},
+            }
+        to_approve.action_approve()
+        return True
+
+    def action_accept_first_counts(self):
+        """Da por bueno el primer conteo de todas las líneas en reconteo."""
+        self._check_state(("review",), self.env._("aceptar"))
+        for count in self:
+            lines = count.line_ids.filtered(lambda line: line.state == "recount")
+            if not lines:
+                continue
+            lines.action_accept_first_count()
+            count.message_post(
+                subtype_xmlid="mail.mt_note",
+                body=self.env._(
+                    "%(user)s aceptó el primer conteo de %(n)s líneas sin recontar.",
+                    user=self.env.user.name,
+                    n=len(lines),
+                ),
+            )
         return True
 
     def action_approve_within_tolerance(self):
