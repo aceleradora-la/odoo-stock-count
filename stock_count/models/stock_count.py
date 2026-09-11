@@ -158,7 +158,10 @@ class StockCount(models.Model):
     pending_count = fields.Integer(compute="_compute_line_stats", store=True)
     diff_count = fields.Integer(compute="_compute_line_stats", store=True)
     diff_value = fields.Monetary(
-        compute="_compute_line_stats", store=True, currency_field="currency_id"
+        string="Valor de las diferencias",
+        compute="_compute_line_stats",
+        store=True,
+        currency_field="currency_id",
     )
     accuracy = fields.Float(
         string="Precisión (%)", compute="_compute_line_stats", store=True, digits=(16, 2)
@@ -484,9 +487,14 @@ class StockCount(models.Model):
         return abs(line.diff_pct) <= self.auto_approve_tolerance_pct
 
     def action_to_review(self):
-        """En conteo → En revisión: aprueba lo tolerable y manda a reconteo lo que se pasa."""
-        self._check_state(("counting",), self.env._("enviar a revisión"))
-        for count in self:
+        """En conteo → En revisión: aprueba lo tolerable y manda a reconteo lo que se pasa.
+
+        Se dispara sola al cargar la última línea; el botón queda para cuando se quiere
+        pasar a revisión omitiendo lo que falta.
+        """
+        already = self.filtered(lambda count: count.state == "review")
+        self._check_state(("counting", "review"), self.env._("enviar a revisión"))
+        for count in self - already:
             pending = count.line_ids.filtered(lambda line: line.state in ("pending", "recount"))
             if pending:
                 raise UserError(

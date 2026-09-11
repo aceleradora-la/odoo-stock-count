@@ -252,6 +252,18 @@ class StockCountLine(models.Model):
                 super(StockCountLine, second).write(
                     {"recounted_by_id": uid, "recounted_at": now, "state": "counted"}
                 )
+                # Tras el segundo conteo, lo que queda dentro de la tolerancia se aprueba
+                # solo; el resto espera al supervisor.
+                auto = second.filtered(
+                    lambda line: (
+                        line.count_state == "review" and line.count_id._line_within_tolerance(line)
+                    )
+                )
+                super(StockCountLine, auto).write({"state": "approved"})
+            # Cuando se carga la última línea, el recuento pasa solo a revisión.
+            for count in self.count_id.filtered(lambda count: count.state == "counting"):
+                if not count.line_ids.filtered(lambda line: line.state in ("pending", "recount")):
+                    count.sudo().action_to_review()
         return res
 
     # ------------------------------------------------------------------
