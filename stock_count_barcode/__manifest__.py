@@ -2,7 +2,7 @@
     "name": "Recuento de inventario: app Código de barras (Enterprise)",
     "summary": "Tarjeta 'Recuentos' en la app Código de barras de Odoo Enterprise que abre "
     "la vista de conteo móvil del recuento",
-    "version": "19.0.1.0.0",
+    "version": "18.0.1.0.0",
     "category": "Inventory/Inventory",
     "author": "aceleradora.la",
     "website": "https://github.com/aceleradora-la/odoo-stock-count",

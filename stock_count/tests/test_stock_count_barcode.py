@@ -60,7 +60,7 @@ class TestStockCountBarcode(TransactionCase):
                 "name": "Luis Paz",
                 "login": "luis.barcode",
                 "email": "luis.barcode@example.com",
-                "group_ids": [
+                "groups_id": [
                     (
                         6,
                         0,
