@@ -34,6 +34,9 @@
                     <i class="fa fa-barcode"/>
                     <input t-ref="scanInput" type="text" class="form-control" placeholder="Escanear ubicación o producto"
                            t-model="state.scan" t-on-keydown="onScan" autocomplete="off" autocapitalize="off" spellcheck="false"/>
+                    <button t-if="cameraSupported" class="btn btn-secondary o_stock_count_counter_camera" t-on-click="openCamera" title="Escanear con la cámara">
+                        <i class="fa fa-camera"/>
+                    </button>
                     <label class="o_stock_count_counter_toggle" title="Cada escaneo de producto suma una unidad">
                         <input type="checkbox" t-model="state.scanAddsOne"/> +1
                     </label>

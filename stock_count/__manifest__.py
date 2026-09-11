@@ -7,7 +7,7 @@
     "author": "aceleradora.la",
     "website": "https://github.com/aceleradora-la/odoo-stock-count",
     "license": "AGPL-3",
-    "depends": ["stock", "mail"],
+    "depends": ["stock", "mail", "barcodes"],
     "external_dependencies": {"python": ["xlsxwriter"]},
     "data": [
         "security/stock_count_security.xml",
