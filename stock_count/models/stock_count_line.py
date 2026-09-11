@@ -8,7 +8,7 @@ LINE_STATES = [
     ("counted", "Contada"),
     ("recount", "Reconteo"),
     ("approved", "Aprobada"),
-    ("applied", "Aplicada"),
+    ("applied", "Validada"),
     ("skipped", "Omitida"),
 ]
 
@@ -268,6 +268,8 @@ class StockCountLine(models.Model):
             for count in self.count_id.filtered(lambda count: count.state == "counting"):
                 if not count.line_ids.filtered(lambda line: line.state in ("pending", "recount")):
                     count.sudo().action_to_review()
+            # Un reconteo que dejó todo aprobado valida el recuento.
+            self.count_id._try_auto_validate()
         return res
 
     # ------------------------------------------------------------------
@@ -575,6 +577,7 @@ class StockCountLine(models.Model):
                     )
                 )
         self.write({"state": "approved"})
+        self.count_id._try_auto_validate()
         return True
 
     def action_accept_first_count(self):
@@ -595,6 +598,7 @@ class StockCountLine(models.Model):
                 "note": self.env._("1er conteo aceptado sin recontar por %s", self.env.user.name),
             }
         )
+        self.count_id._try_auto_validate()
         return True
 
     def action_request_recount(self):
@@ -623,8 +627,9 @@ class StockCountLine(models.Model):
     def action_skip(self):
         self._check_manager()
         if any(line.state == "applied" for line in self):
-            raise UserError(self.env._("No se puede omitir una línea ya aplicada."))
+            raise UserError(self.env._("No se puede omitir una línea ya validada."))
         self.write({"state": "skipped"})
+        self.count_id._try_auto_validate()
         return True
 
     def action_reset_pending(self):

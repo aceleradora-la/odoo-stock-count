@@ -5,7 +5,7 @@ class StockLocation(models.Model):
     _inherit = "stock.location"
 
     stock_count_count = fields.Integer(
-        string="Recuentos aplicados", compute="_compute_stock_count_stats"
+        string="Recuentos validados", compute="_compute_stock_count_stats"
     )
     stock_count_last_date = fields.Datetime(
         string="Último recuento", compute="_compute_stock_count_stats"
@@ -15,7 +15,7 @@ class StockLocation(models.Model):
         compute="_compute_stock_count_stats",
         digits=(16, 2),
         help="Promedio de precisión (líneas sin diferencia sobre líneas contadas) de los "
-        "últimos cinco recuentos aplicados que incluyeron esta ubicación.",
+        "últimos cinco recuentos validados que incluyeron esta ubicación.",
     )
 
     def _compute_stock_count_stats(self):
