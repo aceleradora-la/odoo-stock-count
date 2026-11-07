@@ -4,3 +4,4 @@ from . import test_stock_count_lock
 from . import test_stock_count_phase3
 from . import test_stock_count_reports
 from . import test_stock_count_barcode
+from . import test_stock_count_app

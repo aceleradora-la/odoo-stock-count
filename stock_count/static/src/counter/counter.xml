@@ -1,114 +1,185 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <t t-name="stock_count.Counter">
-        <div class="o_stock_count_counter o_action">
-            <div class="o_stock_count_counter_header">
-                <div class="o_stock_count_counter_title">
-                    <button t-if="state.locationId" class="btn btn-link o_stock_count_counter_back" t-on-click="backToLocations" title="Volver a ubicaciones">
-                        <i class="fa fa-arrow-left"/>
-                    </button>
-                    <div>
-                        <div class="o_stock_count_counter_count">
-                            <t t-if="state.counts.length > 1 and !state.locationId">
-                                <select class="form-select" t-on-change="(ev) => this.selectCount(parseInt(ev.target.value) || false)">
-                                    <option value="" t-att-selected="!state.countId">Todos los recuentos</option>
-                                    <t t-foreach="state.counts" t-as="count" t-key="count.id">
-                                        <option t-att-value="count.id" t-att-selected="count.id === state.countId" t-out="count.name"/>
-                                    </t>
-                                </select>
-                            </t>
-                            <t t-else="">
-                                <span t-out="currentCount ? currentCount.name : 'Recuentos activos'"/>
-                            </t>
-                        </div>
-                        <small class="text-muted">
-                            <t t-if="currentLocation" t-out="currentLocation.name"/>
-                            <t t-else="">
-                                <t t-out="pendingTotal"/> líneas pendientes
-                            </t>
-                        </small>
+<t t-name="stock_count.Counter">
+    <div class="o_stock_count_counter">
+
+        <!-- Inicio de la app -->
+        <t t-if="state.screen === 'home'">
+            <div class="o_sc_header o_sc_header_home">
+                <div class="o_sc_app_icon" aria-hidden="true"><i class="fa fa-list-ol"/></div>
+                <div>
+                    <div class="o_sc_title">Recuentos</div>
+                    <div class="o_sc_sub" t-out="todayLabel"/>
+                </div>
+            </div>
+            <div class="o_sc_body">
+                <div class="o_sc_section_title">Tareas de hoy</div>
+                <button type="button" class="o_sc_home_card o_sc_home_card_active" t-on-click="openList">
+                    <div class="o_sc_home_icon" aria-hidden="true"><i class="fa fa-barcode"/></div>
+                    <div class="flex-grow-1">
+                        <div class="o_sc_home_title">Contar</div>
+                        <div class="o_sc_muted" t-out="pendingLabel"/>
                     </div>
-                </div>
-                <div class="o_stock_count_counter_scan">
-                    <i class="fa fa-barcode"/>
-                    <input t-ref="scanInput" type="text" class="form-control" placeholder="Escanear ubicación o producto"
-                           t-model="state.scan" t-on-keydown="onScan" autocomplete="off" autocapitalize="off" spellcheck="false"/>
-                    <button t-if="cameraSupported" class="btn btn-secondary o_stock_count_counter_camera" t-on-click="openCamera" title="Escanear con la cámara">
-                        <i class="fa fa-camera"/>
+                    <i class="fa fa-chevron-right o_sc_home_chevron" aria-hidden="true"/>
+                </button>
+                <div t-if="canInstall" class="o_sc_install">
+                    <button type="button" class="o_sc_btn o_sc_btn_secondary" t-on-click="installApp">
+                        <i class="fa fa-mobile me-2"/> Instalar en el celular
                     </button>
-                    <label class="o_stock_count_counter_toggle" title="Cada escaneo de producto suma una unidad">
-                        <input type="checkbox" t-model="state.scanAddsOne"/> +1
-                    </label>
+                    <div class="o_sc_hint">Queda con su ícono en la pantalla de inicio y abre directo acá, como la app Código de Barras.</div>
                 </div>
             </div>
+        </t>
 
-            <div t-if="state.loading" class="o_stock_count_counter_empty">
-                <i class="fa fa-circle-o-notch fa-spin"/> Cargando…
+        <!-- Recuentos a contar -->
+        <t t-if="state.screen === 'list'">
+            <div class="o_sc_header">
+                <button type="button" class="o_sc_back" aria-label="Volver al inicio" t-on-click="goHome">
+                    <i class="fa fa-chevron-left"/>
+                </button>
+                <div>
+                    <div class="o_sc_title">Contar</div>
+                    <div class="o_sc_sub">Recuentos donde sos contador</div>
+                </div>
             </div>
-
-            <div t-elif="!state.lines.length" class="o_stock_count_counter_empty">
-                <i class="fa fa-check-circle-o fa-3x text-success"/>
-                <p>No tenés líneas pendientes de conteo.</p>
-                <p class="text-muted">Cuando el supervisor confirme un recuento donde sos contador, van a aparecer acá.</p>
-            </div>
-
-            <!-- Lista de ubicaciones -->
-            <div t-elif="!state.locationId" class="o_stock_count_counter_locations">
-                <t t-foreach="locations" t-as="location" t-key="location.id">
-                    <button class="o_stock_count_counter_location" t-att-class="{ 'o_done': location.done === location.total }" t-on-click="() => this.openLocation(location.id)">
-                        <span class="o_stock_count_counter_location_name" t-out="location.name"/>
-                        <span class="o_stock_count_counter_location_progress">
-                            <t t-out="location.done"/> / <t t-out="location.total"/>
-                            <i t-if="location.done === location.total" class="fa fa-check text-success"/>
-                            <i t-else="" class="fa fa-chevron-right"/>
-                        </span>
-                    </button>
+            <div class="o_sc_body">
+                <div t-if="state.loading" class="o_sc_empty"><i class="fa fa-circle-o-notch fa-spin me-1"/> Cargando…</div>
+                <div t-elif="!state.counts.length" class="o_sc_empty">
+                    No hay recuentos para contar. Cuando el supervisor confirme uno donde sos contador, aparece acá.
+                </div>
+                <t t-foreach="state.counts" t-as="rec" t-key="rec.id">
+                    <t t-set="sum" t-value="summary(rec)"/>
+                    <div t-attf-class="o_sc_card {{ rec.state === 'counting' ? 'o_sc_card_active' : '' }}">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="o_sc_card_title" t-out="rec.name"/>
+                                <div class="o_sc_muted"><t t-out="sum.locations"/> ubicaciones · <t t-out="sum.lines"/> productos</div>
+                            </div>
+                            <span t-attf-class="o_sc_badge {{ rec.state === 'review' ? 'o_sc_badge_warn' : 'o_sc_badge_draft' }}" t-out="stateLabel(rec)"/>
+                        </div>
+                        <div class="d-flex justify-content-between o_sc_muted">
+                            <span><t t-out="sum.locationsDone"/> de <t t-out="sum.locations"/> ubicaciones terminadas</span>
+                            <span><t t-out="sum.done"/> de <t t-out="sum.lines"/> contados</span>
+                        </div>
+                        <div class="o_sc_progress"><div t-attf-style="width: {{ sum.progress }}%"/></div>
+                        <div t-if="sum.recount" class="o_sc_alert"><i class="fa fa-refresh me-1"/><t t-out="sum.recount"/> líneas para recontar</div>
+                        <button type="button" class="o_sc_btn o_sc_btn_primary" t-on-click="() => this.openCount(rec.id)">
+                            <t t-if="sum.done">Continuar</t><t t-else="">Comenzar</t>
+                        </button>
+                    </div>
                 </t>
             </div>
+        </t>
 
-            <!-- Líneas de la ubicación -->
-            <div t-else="" class="o_stock_count_counter_lines">
+        <!-- Recuento abierto: una tarjeta por ubicación -->
+        <t t-if="state.screen === 'count' and currentCount">
+            <div class="o_sc_header">
+                <button type="button" class="o_sc_back" aria-label="Volver" t-on-click="openList">
+                    <i class="fa fa-chevron-left"/>
+                </button>
+                <div>
+                    <div class="o_sc_title" t-out="currentCount.name"/>
+                    <div class="o_sc_sub" t-out="stateLabel(currentCount)"/>
+                </div>
+            </div>
+            <div class="o_sc_body">
+                <div class="d-flex justify-content-between o_sc_muted">
+                    <span><strong><t t-out="currentSummary.locationsDone"/> de <t t-out="currentSummary.locations"/></strong> ubicaciones terminadas</span>
+                    <span><t t-out="currentSummary.done"/> de <t t-out="currentSummary.lines"/> contados</span>
+                </div>
+                <div class="o_sc_progress"><div t-attf-style="width: {{ currentSummary.progress }}%"/></div>
+
+                <button t-if="scannerSupported" type="button" class="o_sc_btn o_sc_btn_primary o_sc_btn_scan" t-on-click="scan" t-att-disabled="state.busy">
+                    <i class="fa fa-camera me-2"/> Escanear ubicación o producto
+                </button>
+                <form t-if="state.showManual or !scannerSupported" class="o_sc_manual" t-on-submit="submitManual">
+                    <label for="o_sc_manual_code" class="o_sc_muted">Código de ubicación o producto</label>
+                    <div class="d-flex gap-2">
+                        <input id="o_sc_manual_code" type="text" class="o_sc_input" placeholder="Escaneá o escribí el código" t-model="state.manualCode" autocomplete="off" autocapitalize="off" spellcheck="false"/>
+                        <button type="submit" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small">Abrir</button>
+                    </div>
+                </form>
+                <button t-else="" type="button" class="o_sc_link" t-on-click="() => { state.showManual = true; }">Escribir el código a mano</button>
+
+                <div class="o_sc_grid">
+                    <t t-foreach="currentLocations" t-as="loc" t-key="loc.id">
+                        <button type="button" t-attf-class="o_sc_loc_card o_sc_loc_{{ loc.status }}" t-on-click="() => this.openLocation(loc.id)">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="o_sc_loc_code" t-out="loc.name"/>
+                                <i t-if="loc.status === 'closed'" class="fa fa-check o_sc_check"/>
+                                <span t-elif="loc.status === 'open'" class="o_sc_follow">Seguir</span>
+                            </div>
+                            <div t-if="loc.status === 'pending'" class="o_sc_muted"><t t-out="loc.total"/> productos · pendiente</div>
+                            <div t-else="" class="o_sc_muted"><t t-out="loc.done"/> de <t t-out="loc.total"/> contados</div>
+                            <div t-if="loc.recount" class="o_sc_alert"><t t-out="loc.recount"/> para recontar</div>
+                        </button>
+                    </t>
+                </div>
+            </div>
+            <div class="o_sc_footer">
+                <button type="button" class="o_sc_btn o_sc_btn_secondary" t-on-click="openAddProduct" t-att-disabled="state.busy">
+                    <i class="fa fa-plus me-1"/> Producto no esperado
+                </button>
+                <button type="button" t-attf-class="o_sc_btn {{ allClosed ? 'o_sc_btn_primary' : 'o_sc_btn_secondary' }}"
+                        t-att-disabled="state.busy or !currentSummary.done" t-on-click="() => this.finish(false)">
+                    <i class="fa fa-check me-1"/> Terminar conteo
+                </button>
+                <div class="o_sc_hint">
+                    <t t-if="allClosed">Todas las ubicaciones están terminadas.</t>
+                    <t t-else="">Si quedan productos sin cantidad, avisa antes de terminar y los registra como 0. Tocá una ubicación terminada para corregir.</t>
+                </div>
+            </div>
+        </t>
+
+        <!-- Cantidades de una ubicación -->
+        <t t-if="state.screen === 'location' and currentLocation">
+            <div class="o_sc_header">
+                <button type="button" class="o_sc_back" aria-label="Volver a las ubicaciones" t-on-click="backToCount">
+                    <i class="fa fa-chevron-left"/>
+                </button>
+                <div class="flex-grow-1">
+                    <div class="o_sc_sub">Ubicación</div>
+                    <div class="o_sc_title o_sc_code" t-out="currentLocation.name"/>
+                </div>
+                <div class="o_sc_header_stats">
+                    <div><strong t-out="currentLocation.done"/> de <t t-out="currentLocation.total"/></div>
+                    <div>contados</div>
+                </div>
+            </div>
+            <div class="o_sc_body o_sc_location">
                 <t t-foreach="currentLines" t-as="line" t-key="line.id">
-                    <div class="o_stock_count_counter_line" t-att-class="{ 'o_done': line.done, 'o_recount': line.is_recount }" t-att-data-line-id="line.id">
-                        <div class="o_stock_count_counter_line_info">
-                            <div class="o_stock_count_counter_line_product">
-                                <i t-if="line.done" class="fa fa-check text-success me-1"/>
-                                <span t-out="line.product_name"/>
-                            </div>
-                            <div class="o_stock_count_counter_line_meta text-muted">
-                                <span t-if="line.lot_name" class="badge text-bg-light me-1">Lote <t t-out="line.lot_name"/></span>
-                                <span t-if="line.is_recount" class="badge text-bg-warning me-1">2° conteo</span>
-                                <span t-out="line.uom_name"/>
+                    <div t-attf-class="o_sc_line {{ line.done ? '' : 'o_sc_line_empty' }} {{ line.is_recount ? 'o_sc_line_recount' : '' }}" t-att-data-line-id="line.id">
+                        <div class="o_sc_line_info">
+                            <label t-attf-for="o_sc_line_{{ line.id }}" class="o_sc_line_label" t-out="line.product_name"/>
+                            <div class="o_sc_line_meta">
+                                <span t-if="line.product_code" t-out="line.product_code"/>
+                                <span t-if="line.lot_name" class="o_sc_tag">Lote <t t-out="line.lot_name"/></span>
+                                <span t-if="line.is_recount" class="o_sc_tag o_sc_tag_warn">2° conteo</span>
                             </div>
                         </div>
-                        <div class="o_stock_count_counter_line_qty">
-                            <input type="number" inputmode="decimal" min="0" step="any" class="form-control"
-                                   t-att-value="line.done ? line.quantity : ''"
-                                   t-att-placeholder="line.done ? '' : '0'"
-                                   t-att-disabled="state.saving[line.id]"
-                                   t-on-change="(ev) => this.onQuantityChange(line, ev)"
-                                   t-on-keydown="(ev) => this.onQuantityKeydown(line, ev)"/>
-                            <button class="btn btn-secondary" t-att-disabled="state.saving[line.id]" t-on-click="() => this.addOne(line, 1)" title="Sumar una unidad">+1</button>
-                        </div>
+                        <input t-attf-id="o_sc_line_{{ line.id }}" type="number" inputmode="decimal" enterkeyhint="next"
+                               class="o_sc_qty" min="0" step="any" placeholder="—"
+                               t-att-value="line.done ? line.quantity : ''"
+                               t-att-disabled="state.busy"
+                               t-on-change="(ev) => this.onQuantityChange(line, ev)"
+                               t-on-keydown="(ev) => this.onQuantityKeydown(line, ev)"/>
+                        <span class="o_sc_uom" t-out="line.uom_name"/>
+                        <button type="button" class="o_sc_plus" t-att-disabled="state.busy" t-on-click="() => this.addOne(line, 1)" title="Sumar una unidad">+1</button>
                     </div>
                 </t>
+                <div class="o_sc_actions">
+                    <button type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-on-click="openAddProduct" t-att-disabled="state.busy"><i class="fa fa-plus me-1"/> Producto</button>
+                    <button type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-on-click="nextLocation" t-att-disabled="state.busy">Siguiente <i class="fa fa-arrow-right ms-1"/></button>
+                    <button type="button" class="o_sc_btn o_sc_btn_primary o_sc_btn_small" t-on-click="() => this.finish(true)" t-att-disabled="state.busy"><i class="fa fa-check me-1"/> Terminar</button>
+                </div>
+                <div class="o_sc_hint">
+                    Enter pasa al producto de abajo. Escanear un producto suma 1. Terminar registra en 0 lo que quede sin cantidad.
+                </div>
             </div>
+        </t>
 
-            <div t-if="!state.loading and state.lines.length" class="o_stock_count_counter_footer">
-                <button class="btn btn-outline-secondary" t-on-click="openAddProduct" t-att-disabled="!state.countId">
-                    <i class="fa fa-plus"/> Producto no esperado
-                </button>
-                <button t-if="state.locationId" class="btn btn-primary" t-on-click="nextLocation">
-                    Siguiente ubicación <i class="fa fa-arrow-right"/>
-                </button>
-                <button t-if="state.countId" class="btn btn-success o_stock_count_counter_finish" t-on-click="() => this.finish(!!state.locationId)">
-                    <i class="fa fa-check me-1"/>
-                    <t t-if="state.locationId">Terminar ubicación</t>
-                    <t t-else="">Terminar conteo</t>
-                </button>
-            </div>
-        </div>
-    </t>
+    </div>
+</t>
 
 </templates>

@@ -1,154 +1,261 @@
+// App Recuentos (celular y escritorio): botones grandes, una tarjeta por ubicación,
+// solo la cantidad se escribe.
 .o_stock_count_counter {
+    $sc-primary: #0f6e63;
+    $sc-primary-soft: #e3efed;
+    $sc-border: #d1d5db;
+    $sc-muted: #4b5563;
+    $sc-warn: #9a3412;
+
+    // El contenedor de acciones de Odoo no scrollea: lo hace esta raíz, que ocupa justo
+    // la altura disponible. Sin esto, en el celular no se llega a las tarjetas ni al pie.
     display: flex;
     flex-direction: column;
     height: 100%;
-    max-width: 720px;
+    max-width: 760px;
     margin: 0 auto;
-    background: var(--o-view-background-color, #fff);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #f3f4f6;
+    color: #111827;
+    font-size: 14px;
 
-    &_header {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        padding: 12px 16px 10px;
-        background: var(--o-view-background-color, #fff);
-        border-bottom: 1px solid var(--border-color, #dee2e6);
-    }
-    &_title {
+    .o_sc_header {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 10px;
+        padding: 14px 16px 14px 8px;
+        background: $sc-primary;
+        color: #fff;
     }
-    &_back {
-        padding: 4px 8px;
-        font-size: 18px;
+    .o_sc_title { font-size: 18px; font-weight: 700; line-height: 1.15; }
+    .o_sc_code { font-size: 20px; }
+    .o_sc_sub { font-size: 12px; opacity: 0.9; }
+    .o_sc_header_stats { text-align: right; font-size: 12px; line-height: 1.35; }
+    .o_sc_back {
+        flex: 0 0 44px;
+        width: 44px;
+        height: 44px;
+        border: none;
+        background: transparent;
+        color: #fff;
+        font-size: 22px;
     }
-    &_count {
+
+    .o_sc_header_home { padding: 16px; }
+    .o_sc_app_icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #fff;
+        color: $sc-primary;
+        font-size: 24px;
+    }
+    .o_sc_section_title {
+        font-size: 12px;
         font-weight: 600;
+        color: $sc-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .o_sc_home_card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        padding: 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid $sc-border;
+        border-radius: 12px;
+        color: #111827;
+    }
+    .o_sc_home_card_active { border: 2px solid $sc-primary; }
+    .o_sc_home_icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 48px;
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        background: $sc-primary-soft;
+        color: $sc-primary;
+        font-size: 22px;
+    }
+    .o_sc_home_title { font-size: 17px; font-weight: 700; }
+    .o_sc_home_chevron { color: $sc-primary; font-size: 18px; }
+    .o_sc_install { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 12px; }
+
+    .o_sc_body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px 14px;
+        flex-grow: 1;
+    }
+    .o_sc_empty, .o_sc_muted { color: $sc-muted; font-size: 12px; }
+    .o_sc_hint { color: $sc-muted; font-size: 12px; line-height: 1.4; text-align: center; }
+    .o_sc_alert { color: $sc-warn; font-size: 12px; font-weight: 600; }
+    .o_sc_link {
+        background: none;
+        border: none;
+        color: $sc-primary;
+        font-weight: 600;
+        padding: 10px 0;
+        text-align: center;
+    }
+
+    .o_sc_card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px;
+        background: #fff;
+        border: 1px solid $sc-border;
+        border-radius: 10px;
+    }
+    .o_sc_card_active { border: 2px solid $sc-primary; }
+    .o_sc_card_title { font-size: 17px; font-weight: 700; }
+    .o_sc_badge {
+        padding: 3px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .o_sc_badge_draft { background: $sc-primary; color: #fff; }
+    .o_sc_badge_warn { background: #fff1cc; color: #8a5a00; }
+
+    .o_sc_progress {
+        height: 8px;
+        border-radius: 4px;
+        background: #e5e7eb;
+        overflow: hidden;
+        > div { height: 100%; background: $sc-primary; }
+    }
+
+    .o_sc_btn {
+        width: 100%;
+        height: 46px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        &:disabled { opacity: 0.5; }
+    }
+    .o_sc_btn_primary { background: $sc-primary; color: #fff; border: none; }
+    .o_sc_btn_secondary { background: #fff; color: $sc-primary; border: 2px solid $sc-primary; }
+    .o_sc_btn_scan { height: 52px; font-size: 17px; font-weight: 700; }
+    .o_sc_btn_small { height: 44px; font-size: 14px; }
+    .o_sc_manual { display: flex; flex-direction: column; gap: 6px; }
+    .o_sc_input {
+        flex-grow: 1;
+        min-width: 0;
+        height: 44px;
+        padding: 0 12px;
+        border: 1px solid $sc-border;
+        border-radius: 10px;
         font-size: 16px;
     }
-    &_scan {
+
+    .o_sc_grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .o_sc_loc_card {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-height: 56px;
+        padding: 8px 10px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid $sc-border;
+        border-radius: 10px;
+        color: #111827;
+    }
+    .o_sc_loc_open { background: #f6faf9; border: 2px solid $sc-primary; }
+    .o_sc_loc_pending { background: #f9fafb; border: 1px dashed #9ca3af; color: $sc-muted; }
+    .o_sc_loc_code { font-size: 14px; font-weight: 700; word-break: break-word; }
+    .o_sc_check { color: #166534; font-size: 16px; }
+    .o_sc_follow { color: $sc-primary; font-size: 12px; font-weight: 700; }
+
+    .o_sc_line {
         display: flex;
         align-items: center;
         gap: 8px;
-        > i {
-            font-size: 20px;
-            color: var(--o-brand-primary, #714b67);
-        }
-        input {
-            flex: 1;
-            font-size: 16px;
-            padding: 8px 12px;
-        }
+        min-height: 56px;
+        padding: 6px 8px 6px 12px;
+        background: #fff;
+        border: 1px solid $sc-border;
+        border-radius: 10px;
+        &:focus-within { border: 3px solid $sc-primary; padding: 4px 6px 4px 10px; }
     }
-    &_toggle {
-        white-space: nowrap;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
+    .o_sc_line_empty { background: #f9fafb; border-style: dashed; border-color: #9ca3af; }
+    .o_sc_line_recount { background: #fffbeb; }
+    .o_sc_line_info { flex: 1 1 auto; min-width: 0; }
+    .o_sc_line_label {
+        display: block;
         margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: #111827;
+        overflow-wrap: anywhere;
     }
-
-    &_empty {
-        padding: 48px 24px;
-        text-align: center;
-        p {
-            margin: 12px 0 0;
-        }
+    .o_sc_line:focus-within .o_sc_line_label { color: $sc-primary; }
+    .o_sc_line_meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: $sc-muted; margin-top: 2px; }
+    .o_sc_tag { padding: 0 6px; border-radius: 8px; background: #eef0f3; }
+    .o_sc_tag_warn { background: #fff1cc; color: #8a5a00; font-weight: 600; }
+    .o_sc_qty {
+        flex: 0 0 92px;
+        width: 92px;
+        height: 42px;
+        padding: 0 6px;
+        border: 1px solid $sc-border;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 22px;
+        font-weight: 700;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: #111827;
+        outline: none;
+        -moz-appearance: textfield;
+        &::-webkit-outer-spin-button, &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     }
-
-    &_locations {
-        display: flex;
-        flex-direction: column;
-    }
-    &_location {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-        padding: 16px;
-        border: 0;
-        border-bottom: 1px solid var(--border-color, #eef0f3);
-        background: transparent;
-        text-align: left;
+    .o_sc_line:focus-within .o_sc_qty { border-color: $sc-primary; }
+    .o_sc_uom { flex: 0 0 auto; min-width: 28px; font-size: 11px; color: $sc-muted; }
+    .o_sc_plus {
+        flex: 0 0 44px;
+        height: 42px;
+        border: 2px solid $sc-primary;
+        border-radius: 8px;
+        background: #fff;
+        color: $sc-primary;
         font-size: 15px;
-        &.o_done {
-            color: var(--o-text-muted, #6c757d);
-        }
-        &_name {
-            font-weight: 500;
-        }
-        &_progress {
-            font-variant-numeric: tabular-nums;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        font-weight: 700;
+        &:disabled { opacity: 0.5; }
     }
-
-    &_lines {
-        display: flex;
-        flex-direction: column;
-    }
-    &_line {
+    .o_sc_actions {
         display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px 12px;
-        align-items: center;
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border-color, #eef0f3);
-        &.o_done {
-            background: rgba(40, 167, 69, 0.05);
-        }
-        &.o_recount {
-            background: rgba(255, 193, 7, 0.08);
-        }
-        &_product {
-            font-weight: 600;
-            font-size: 15px;
-        }
-        &_meta {
-            font-size: 12px;
-            margin-top: 2px;
-        }
-        &_qty {
-            display: flex;
-            gap: 6px;
-            input {
-                width: 96px;
-                font-size: 20px;
-                text-align: right;
-                font-variant-numeric: tabular-nums;
-                padding: 6px 8px;
-            }
-            button {
-                font-size: 16px;
-                font-weight: 600;
-                min-width: 48px;
-            }
-        }
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 4px;
     }
 
-    &_footer {
+    .o_sc_footer {
         position: sticky;
         bottom: 0;
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 8px;
-        padding: 10px 16px;
-        background: var(--o-view-background-color, #fff);
-        border-top: 1px solid var(--border-color, #dee2e6);
-        margin-top: auto;
-        button {
-            flex: 1 1 40%;
-            padding: 10px;
-        }
-        .o_stock_count_counter_finish {
-            flex-basis: 100%;
-            padding: 12px;
-            font-weight: 600;
-        }
+        padding: 10px 16px 16px;
+        background: #fff;
+        border-top: 1px solid #e5e7eb;
     }
 }
