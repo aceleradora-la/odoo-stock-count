@@ -142,7 +142,8 @@ class TestStockCountCycle(TransactionCase):
         self.assertEqual(count.counter_ids, self.counter)
         self.assertEqual(count.lock_mode, "warn")
         self.assertIn("periódico", count.origin)
-        expected_date = fields.Date.context_today(rule) + timedelta(days=2)
+        # date_planned se calcula en UTC: comparar con la fecha UTC, no con la local
+        expected_date = fields.Date.to_date(fields.Datetime.now()) + timedelta(days=2)
         self.assertEqual(fields.Date.to_date(count.date_planned), expected_date)
         activity = count.activity_ids
         self.assertEqual(len(activity), 1)
