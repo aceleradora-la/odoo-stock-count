@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- App Recuentos: inicio y conteo desde el celular o el escritorio -->
     <record id="action_stock_count_counter" model="ir.actions.client">
-        <field name="name">Contar</field>
+        <field name="name">Recuentos</field>
         <field name="tag">stock_count_counter</field>
+        <!-- URL /odoo/recuentos; es también el alcance de la app instalada en el celular -->
+        <field name="path">recuentos</field>
     </record>
+
+    <!-- App aparte en el inicio de Odoo para quien cuenta. El supervisor administra los
+         recuentos desde Inventario › Operaciones › Recuentos. -->
+    <menuitem id="menu_stock_count_app_root"
+              name="Recuentos"
+              sequence="36"
+              action="action_stock_count_counter"
+              groups="stock_count.group_stock_count_user"
+              web_icon="stock_count,static/description/icon.svg"/>
 
     <menuitem id="menu_stock_count_root" name="Recuentos" parent="stock.menu_stock_warehouse_mgmt" sequence="35" groups="stock_count.group_stock_count_user"/>
     <menuitem id="menu_stock_count" name="Recuentos" parent="menu_stock_count_root" action="stock_count_action" sequence="10"/>

@@ -3,25 +3,31 @@
 import { registry } from "@web/core/registry";
 
 registry.category("web_tour.tours").add("stock_count_counter_tour", {
-    url: "/odoo/action-stock_count.action_stock_count_counter",
+    url: "/odoo/recuentos",
     steps: () => [
         {
-            content: "Aparece la lista de ubicaciones",
-            trigger: ".o_stock_count_counter .o_stock_count_counter_location",
+            content: "Inicio: entrar a Contar",
+            trigger: ".o_stock_count_counter .o_sc_home_card_active",
             run: "click",
         },
         {
-            content: "Se ven las líneas de la ubicación",
-            trigger: ".o_stock_count_counter_line",
+            content: "Lista: abrir el recuento",
+            trigger: ".o_sc_card .o_sc_btn_primary",
+            run: "click",
         },
         {
-            content: "Sumar una unidad a la primera línea",
-            trigger: ".o_stock_count_counter_line:first-child button",
+            content: "Recuento: abrir la primera ubicación",
+            trigger: ".o_sc_loc_card",
+            run: "click",
+        },
+        {
+            content: "Ubicación: sumar una unidad a la primera línea",
+            trigger: ".o_sc_line:first-child .o_sc_plus",
             run: "click",
         },
         {
             content: "La línea queda contada",
-            trigger: ".o_stock_count_counter_line.o_done",
+            trigger: ".o_sc_line:not(.o_sc_line_empty)",
         },
     ],
 });

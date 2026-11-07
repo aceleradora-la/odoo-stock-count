@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { Component, onWillStart, useRef, useState } from "@odoo/owl";
+import { Component, onPatched, onWillStart, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useBus, useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
@@ -8,15 +8,16 @@ import { scanBarcode } from "@web/core/barcode/barcode_dialog";
 import { isBarcodeScannerSupported } from "@web/core/barcode/barcode_video_scanner";
 import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 
+const MODEL = "stock.count.line";
+const STATE_LABELS = { ready: "Para contar", counting: "En conteo", review: "Reconteo" };
+
 /**
- * Vista móvil del contador.
+ * App Recuentos, pensada para el celular y usable en el escritorio:
+ * inicio → recuentos a contar → tarjetas por ubicación → cantidades de una ubicación.
  *
- * Muestra las líneas a contar del usuario (asignadas a él, o libres de los recuentos
- * donde es contador) agrupadas por ubicación, con un campo de cantidad grande, botón +1
- * y escaneo por tres vías: lector físico (servicio de código de barras de Odoo, sin
- * necesidad de enfocar nada), cámara del dispositivo (lector de vídeo del núcleo web) y
- * campo de texto para tipear. Escanear una ubicación la abre; escanear un producto suma
- * una unidad (o la cantidad embebida en un código GS1) a su línea.
+ * La ubicación se abre tocando su tarjeta, escaneando su código (lector físico, cámara
+ * o escribiéndolo). En la ubicación solo se escribe la cantidad: Enter/Siguiente pasa al
+ * producto de abajo. Escanear un producto suma una unidad (o la cantidad del código GS1).
  *
  * Nunca pide al servidor la cantidad teórica: el conteo desde acá es siempre "a ciegas"
  * en pantalla, y en conteo ciego el ORM además la devuelve en cero.
@@ -29,53 +30,120 @@ export class StockCountCounter extends Component {
         this.orm = useService("orm");
         this.action = useService("action");
         this.notification = useService("notification");
-        this.barcode = useService("barcode");
         this.dialog = useService("dialog");
-        this.scanInput = useRef("scanInput");
-        this.cameraSupported = isBarcodeScannerSupported();
-        useBus(this.barcode.bus, "barcode_scanned", (ev) => this.handleScan(ev.detail.barcode));
+        this.barcode = useService("barcode");
+        this.pwa = useService("pwa");
+        this.scannerSupported = isBarcodeScannerSupported();
+        this.focusPending = false;
         this.state = useState({
-            loading: true,
+            screen: "home", // home | list | count | location
             counts: [],
             lines: [],
             countId: false,
             locationId: false,
-            scan: "",
-            scanAddsOne: true,
-            saving: {},
+            manualCode: "",
+            showManual: false,
+            busy: false,
+            loading: true,
         });
+        useBus(this.barcode.bus, "barcode_scanned", (ev) => this.handleScan(ev.detail.barcode));
         onWillStart(() => this.load());
+        onPatched(() => this.focusFirstEmpty());
     }
 
     // ------------------------------------------------------------------
     // Datos
     // ------------------------------------------------------------------
-    async load(countId) {
+    async call(method, args = [], kwargs = {}) {
+        this.state.busy = true;
+        try {
+            return await this.orm.call(MODEL, method, args, kwargs);
+        } catch (error) {
+            const message = (error.data && error.data.message) || error.message || String(error);
+            this.notification.add(message, { type: "danger" });
+            throw error;
+        } finally {
+            this.state.busy = false;
+        }
+    }
+
+    async load() {
         this.state.loading = true;
-        const data = await this.orm.call("stock.count.line", "counter_get_data", [
-            countId || this.state.countId || false,
-        ]);
-        this.state.counts = data.counts;
-        if (!this.state.countId && data.counts.length === 1) {
-            this.state.countId = data.counts[0].id;
+        try {
+            const data = await this.call("counter_get_data", [false]);
+            this.state.counts = data.counts;
+            this.state.lines = data.lines;
+        } finally {
+            this.state.loading = false;
         }
-        this.state.lines = data.lines.filter(
-            (line) => !this.state.countId || line.count_id === this.state.countId
-        );
-        if (this.state.locationId && !this.locations.some((l) => l.id === this.state.locationId)) {
+        if (this.state.countId && !this.currentCount) {
+            // El recuento ya no es mío o se validó: vuelvo a la lista
+            this.state.countId = false;
             this.state.locationId = false;
+            this.state.screen = "list";
         }
-        this.state.loading = false;
     }
 
-    get currentCount() {
-        return this.state.counts.find((c) => c.id === this.state.countId);
+    get todayLabel() {
+        const label = new Date().toLocaleDateString("es-AR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+        });
+        return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
-    /** Ubicaciones con líneas, en orden, con avance. */
-    get locations() {
+    get pendingLabel() {
+        const counts = this.state.counts;
+        if (!counts.length) {
+            return _t("Sin recuentos para contar");
+        }
+        const pending = this.state.lines.filter((line) => !line.done).length;
+        const names = counts.map((c) => c.name).join(", ");
+        return `${counts.length} ${counts.length === 1 ? _t("recuento") : _t("recuentos")} · ${pending} ${_t("líneas pendientes")} · ${names}`;
+    }
+
+    /** Se ofrece instalar la app mientras no se esté ya dentro de la app instalada. */
+    get canInstall() {
+        return !this.pwa.isScopedApp && !window.matchMedia("(display-mode: standalone)").matches;
+    }
+
+    installApp() {
+        const url =
+            "/scoped_app?app_id=stock_count&path=" +
+            encodeURIComponent("scoped_app/recuentos") +
+            "&app_name=" +
+            encodeURIComponent("Recuentos");
+        window.open(url, "_blank");
+    }
+
+    linesOf(countId) {
+        return this.state.lines.filter((line) => line.count_id === countId);
+    }
+
+    /** Resumen de un recuento para la lista: líneas y ubicaciones hechas / totales. */
+    summary(count) {
+        const lines = this.linesOf(count.id);
+        const locations = this.locationsOf(count.id);
+        const done = lines.filter((line) => line.done).length;
+        return {
+            lines: lines.length,
+            done,
+            locations: locations.length,
+            locationsDone: locations.filter((loc) => loc.status === "closed").length,
+            progress: lines.length ? Math.round((done / lines.length) * 100) : 0,
+            recount: lines.filter((line) => line.is_recount && !line.done).length,
+        };
+    }
+
+    stateLabel(count) {
+        return STATE_LABELS[count.state] || count.state;
+    }
+
+    /** Ubicaciones de un recuento con avance y estado: pending | open | closed. */
+    locationsOf(countId) {
         const byId = new Map();
-        for (const line of this.state.lines) {
+        for (const line of this.linesOf(countId)) {
             if (!byId.has(line.location_id)) {
                 byId.set(line.location_id, {
                     id: line.location_id,
@@ -83,6 +151,7 @@ export class StockCountCounter extends Component {
                     barcode: line.location_barcode,
                     total: 0,
                     done: 0,
+                    recount: 0,
                 });
             }
             const loc = byId.get(line.location_id);
@@ -90,119 +159,102 @@ export class StockCountCounter extends Component {
             if (line.done) {
                 loc.done += 1;
             }
+            if (line.is_recount && !line.done) {
+                loc.recount += 1;
+            }
+        }
+        for (const loc of byId.values()) {
+            loc.status = loc.done === 0 ? "pending" : loc.done === loc.total ? "closed" : "open";
         }
         return [...byId.values()];
     }
 
+    get currentCount() {
+        return this.state.counts.find((c) => c.id === this.state.countId);
+    }
+
+    get currentSummary() {
+        return this.currentCount ? this.summary(this.currentCount) : null;
+    }
+
+    get currentLocations() {
+        return this.state.countId ? this.locationsOf(this.state.countId) : [];
+    }
+
     get currentLocation() {
-        return this.locations.find((l) => l.id === this.state.locationId);
+        return this.currentLocations.find((loc) => loc.id === this.state.locationId);
     }
 
     get currentLines() {
-        return this.state.lines.filter((line) => line.location_id === this.state.locationId);
+        return this.linesOf(this.state.countId).filter(
+            (line) => line.location_id === this.state.locationId
+        );
     }
 
-    get pendingTotal() {
-        return this.state.lines.filter((line) => !line.done).length;
+    get allClosed() {
+        const locations = this.currentLocations;
+        return locations.length > 0 && locations.every((loc) => loc.status === "closed");
     }
 
     // ------------------------------------------------------------------
     // Navegación
     // ------------------------------------------------------------------
-    async selectCount(countId) {
+    async goHome() {
+        await this.load();
+        this.state.screen = "home";
+        this.state.countId = false;
+        this.state.locationId = false;
+    }
+
+    async openList() {
+        await this.load();
+        this.state.screen = "list";
+        this.state.countId = false;
+        this.state.locationId = false;
+    }
+
+    openCount(countId) {
         this.state.countId = countId;
         this.state.locationId = false;
-        await this.load(countId);
+        this.state.showManual = false;
+        this.state.screen = "count";
+    }
+
+    backToCount() {
+        this.state.locationId = false;
+        this.state.screen = "count";
     }
 
     openLocation(locationId) {
         this.state.locationId = locationId;
-        this.focusScan();
-    }
-
-    backToLocations() {
-        this.state.locationId = false;
-    }
-
-    // ------------------------------------------------------------------
-    // Terminar
-    // ------------------------------------------------------------------
-    async finish(locationOnly) {
-        if (!this.state.countId) {
-            return;
-        }
-        const locationId = locationOnly ? this.state.locationId : false;
-        const args = [this.state.countId, locationId || false];
-        const probe = await this.orm.call("stock.count.line", "counter_finish", [...args, false]);
-        if (probe.done) {
-            return this._afterFinish(probe, locationOnly);
-        }
-        const body = locationOnly
-            ? _t(
-                  "Hay %s productos sin cantidad en esta ubicación. Se registrarán como 0 (no hay stock). ¿Terminar la ubicación?",
-                  probe.pending
-              )
-            : _t(
-                  "Hay %s productos sin cantidad. Se registrarán como 0 (no hay stock). ¿Terminar el conteo?",
-                  probe.pending
-              );
-        this.dialog.add(ConfirmationDialog, {
-            title: locationOnly ? _t("Terminar ubicación") : _t("Terminar conteo"),
-            body,
-            confirmLabel: _t("Sí, terminar"),
-            cancelLabel: _t("Volver"),
-            confirm: async () => {
-                const result = await this.orm.call("stock.count.line", "counter_finish", [
-                    ...args,
-                    true,
-                ]);
-                await this._afterFinish(result, locationOnly);
-            },
-        });
-    }
-
-    async _afterFinish(result, locationOnly) {
-        await this.load();
-        this.state.locationId = false;
-        if (locationOnly && result.remaining) {
-            this.notification.add(_t("Ubicación terminada."), { type: "success" });
-            return;
-        }
-        if (result.recount) {
-            this.notification.add(
-                _t(
-                    "Conteo terminado. El recuento está en revisión y tenés %s líneas para recontar.",
-                    result.recount
-                ),
-                { type: "warning", sticky: true }
-            );
-        } else if (result.state === "review") {
-            this.notification.add(_t("Conteo terminado y enviado a revisión."), {
-                type: "success",
-                sticky: true,
-            });
-        } else {
-            this.notification.add(_t("Tus líneas quedaron contadas."), { type: "success" });
-        }
+        this.state.screen = "location";
+        this.focusPending = true;
     }
 
     nextLocation() {
-        const locations = this.locations;
-        const index = locations.findIndex((l) => l.id === this.state.locationId);
+        const locations = this.currentLocations;
+        const index = locations.findIndex((loc) => loc.id === this.state.locationId);
         const next =
-            locations.slice(index + 1).find((l) => l.done < l.total) ||
-            locations.find((l) => l.done < l.total);
+            locations.slice(index + 1).find((loc) => loc.status !== "closed") ||
+            locations.find((loc) => loc.status !== "closed");
         if (next && next.id !== this.state.locationId) {
             this.openLocation(next.id);
         } else {
-            this.state.locationId = false;
+            this.backToCount();
             this.notification.add(_t("No quedan ubicaciones pendientes."), { type: "success" });
         }
     }
 
-    focusScan() {
-        if (this.scanInput.el) {
-            this.scanInput.el.focus();
+    focusFirstEmpty() {
+        if (!this.focusPending) {
+            return;
+        }
+        this.focusPending = false;
+        const inputs = [...document.querySelectorAll(".o_sc_location input.o_sc_qty")];
+        const target = inputs.find((input) => !input.value) || inputs[inputs.length - 1];
+        if (target) {
+            target.focus();
+            target.select();
         }
     }
 
@@ -216,82 +268,109 @@ export class StockCountCounter extends Component {
         }
     }
 
-    async setQuantity(line, value) {
-        const quantity = parseFloat(String(value).replace(",", "."));
-        if (Number.isNaN(quantity) || quantity < 0) {
-            this.notification.add(_t("Cantidad inválida."), { type: "danger" });
+    async commitQuantity(line, input) {
+        const raw = String(input.value).replace(",", ".").trim();
+        if (raw === "") {
             return;
         }
-        this.state.saving[line.id] = true;
-        try {
-            const updated = await this.orm.call("stock.count.line", "counter_set_quantity", [
-                [line.id],
-                quantity,
-            ]);
-            this._replaceLine(updated);
-        } finally {
-            delete this.state.saving[line.id];
+        const value = parseFloat(raw);
+        if (Number.isNaN(value) || value < 0) {
+            this.notification.add(_t("Cantidad inválida."), { type: "danger" });
+            input.value = line.done ? line.quantity : "";
+            return;
         }
+        if (line.done && value === line.quantity) {
+            return;
+        }
+        try {
+            const updated = await this.call("counter_set_quantity", [[line.id], value]);
+            this._replaceLine(updated);
+        } catch {
+            input.value = line.done ? line.quantity : "";
+        }
+        await this._afterLineChange();
     }
 
     async addOne(line, delta = 1) {
-        this.state.saving[line.id] = true;
-        try {
-            const updated = await this.orm.call("stock.count.line", "counter_add_quantity", [
-                [line.id],
-                delta,
-            ]);
-            this._replaceLine(updated);
-        } finally {
-            delete this.state.saving[line.id];
+        const updated = await this.call("counter_add_quantity", [[line.id], delta]);
+        this._replaceLine(updated);
+        await this._afterLineChange();
+    }
+
+    /** Si la última cantidad cerró el recuento (pasó a revisión sin reconteos, o se validó),
+     *  las líneas desaparecen de mi lista: se recarga y se informa. */
+    async _afterLineChange() {
+        if (this.linesOf(this.state.countId).every((line) => line.done)) {
+            const name = this.currentCount && this.currentCount.name;
+            await this.load();
+            if (!this.currentCount) {
+                this.notification.add(
+                    _t("%s: conteo terminado y enviado a revisión.", name),
+                    { type: "success", sticky: true }
+                );
+                this.state.screen = "list";
+            }
         }
     }
 
     onQuantityChange(line, ev) {
-        return this.setQuantity(line, ev.target.value);
+        return this.commitQuantity(line, ev.target);
     }
 
-    onQuantityKeydown(line, ev) {
-        if (ev.key === "Enter") {
-            ev.preventDefault();
-            ev.target.blur();
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Escaneo
-    // ------------------------------------------------------------------
-    /** Enter en el campo de texto: mismo camino que un lector físico. */
-    onScan(ev) {
+    async onQuantityKeydown(line, ev) {
         if (ev.key !== "Enter") {
             return;
         }
         ev.preventDefault();
-        const code = this.state.scan.trim();
-        this.state.scan = "";
-        return this.handleScan(code);
-    }
-
-    /** Cámara del dispositivo (lector de vídeo del núcleo de Odoo). */
-    async openCamera() {
-        try {
-            const code = await scanBarcode(this.env);
-            if (code) {
-                await this.handleScan(code);
-            }
-        } catch (error) {
-            this.notification.add(
-                _t("No se pudo usar la cámara: %s", error.message || error),
-                { type: "danger" }
-            );
+        const input = ev.target;
+        await this.commitQuantity(line, input);
+        const container = input.closest(".o_sc_location");
+        if (!container) {
+            return;
+        }
+        const inputs = [...container.querySelectorAll("input.o_sc_qty")];
+        const next = inputs[inputs.indexOf(input) + 1];
+        if (next) {
+            next.focus();
+            next.select();
+        } else {
+            input.blur();
         }
     }
 
-    /** Busca la línea del producto (y lote) primero en la ubicación abierta. */
+    // ------------------------------------------------------------------
+    // Escaneo: lector físico (bus), cámara, o código escrito a mano
+    // ------------------------------------------------------------------
+    async scan() {
+        let code;
+        try {
+            code = await scanBarcode(this.env);
+        } catch (error) {
+            this.notification.add(
+                _t("No se pudo abrir la cámara: %s. Escribí el código.", error.message || error),
+                { type: "warning" }
+            );
+            this.state.showManual = true;
+            return;
+        }
+        if (code) {
+            await this.handleScan(code);
+        }
+    }
+
+    async submitManual(ev) {
+        ev.preventDefault();
+        const code = this.state.manualCode.trim();
+        if (code) {
+            await this.handleScan(code);
+        }
+    }
+
     _findLine(predicate) {
-        let line = this.currentLines.find(predicate);
+        const mine = this.linesOf(this.state.countId);
+        let line = mine.find((l) => l.location_id === this.state.locationId && predicate(l));
         if (!line) {
-            line = this.state.lines.find(predicate);
+            line = mine.find(predicate);
             if (line) {
                 this.openLocation(line.location_id);
             }
@@ -299,29 +378,28 @@ export class StockCountCounter extends Component {
         return line;
     }
 
-    async _countLine(line, quantity) {
-        if (this.state.scanAddsOne || quantity !== 1) {
-            await this.addOne(line, quantity);
-        } else {
-            const input = document.querySelector(`[data-line-id="${line.id}"] input`);
-            if (input) {
-                input.focus();
-                input.select();
-            }
-        }
+    async _countScanned(line, quantity) {
+        await this.addOne(line, quantity);
+        this.notification.add(
+            _t("%(product)s: +%(qty)s", { product: line.product_name, qty: quantity }),
+            { type: "success" }
+        );
     }
 
     async handleScan(code) {
         code = (code || "").trim();
-        if (!code || this.state.loading) {
+        if (!code || this.state.loading || !["count", "location"].includes(this.state.screen)) {
             return;
         }
         const lower = code.toLowerCase();
-        // 1) Lo que ya tenemos en pantalla, sin ir al servidor
-        const location = this.locations.find(
-            (l) => (l.barcode && l.barcode.toLowerCase() === lower) || l.name.toLowerCase() === lower
+        const location = this.currentLocations.find(
+            (loc) =>
+                (loc.barcode && loc.barcode.toLowerCase() === lower) ||
+                loc.name.toLowerCase() === lower
         );
         if (location) {
+            this.state.manualCode = "";
+            this.state.showManual = false;
             this.openLocation(location.id);
             return;
         }
@@ -332,31 +410,33 @@ export class StockCountCounter extends Component {
                 (line.lot_name && line.lot_name.toLowerCase() === lower)
         );
         if (local) {
-            await this._countLine(local, 1);
+            this.state.manualCode = "";
+            await this._countScanned(local, 1);
             return;
         }
-        // 2) El servidor interpreta el código con la nomenclatura (GS1, peso, lote…)
-        const resolved = await this.orm.call("stock.count.line", "counter_resolve_barcode", [
-            code,
-            this.state.countId || false,
-        ]);
+        const resolved = await this.call("counter_resolve_barcode", [code, this.state.countId]);
         if (resolved.type === "location") {
-            const known = this.locations.find((l) => l.id === resolved.location_id);
+            const known = this.currentLocations.find((loc) => loc.id === resolved.location_id);
             if (known) {
+                this.state.manualCode = "";
+                this.state.showManual = false;
                 this.openLocation(known.id);
             } else {
-                this.notification.add(_t("Esa ubicación no está en tu recuento."), { type: "warning" });
+                this.notification.add(_t("Esa ubicación no está en este recuento."), {
+                    type: "warning",
+                });
             }
             return;
         }
         if (resolved.type === "product") {
             const line = this._findLine(
-                (line) =>
-                    line.product_id === resolved.product_id &&
-                    (!resolved.lot_id || line.lot_id === resolved.lot_id)
+                (l) =>
+                    l.product_id === resolved.product_id &&
+                    (!resolved.lot_id || l.lot_id === resolved.lot_id)
             );
             if (line) {
-                await this._countLine(line, resolved.quantity || 1);
+                this.state.manualCode = "";
+                await this._countScanned(line, resolved.quantity || 1);
                 return;
             }
             this.notification.add(
@@ -382,6 +462,70 @@ export class StockCountCounter extends Component {
             },
             onClose: () => this.load(),
         });
+    }
+
+    // ------------------------------------------------------------------
+    // Terminar ubicación / conteo
+    // ------------------------------------------------------------------
+    async finish(locationOnly) {
+        if (!this.state.countId) {
+            return;
+        }
+        const locationId = locationOnly ? this.state.locationId : false;
+        const args = [this.state.countId, locationId || false];
+        const probe = await this.call("counter_finish", [...args, false]);
+        if (probe.done) {
+            return this._afterFinish(probe, locationOnly);
+        }
+        const body = locationOnly
+            ? _t(
+                  "Hay %s productos sin cantidad en esta ubicación. Se registran como 0 (no hay stock). ¿Terminar la ubicación?",
+                  probe.pending
+              )
+            : _t(
+                  "Hay %s productos sin cantidad. Se registran como 0 (no hay stock). ¿Terminar el conteo?",
+                  probe.pending
+              );
+        this.dialog.add(ConfirmationDialog, {
+            title: locationOnly ? _t("Terminar ubicación") : _t("Terminar conteo"),
+            body,
+            confirmLabel: _t("Sí, terminar"),
+            cancelLabel: _t("Seguir contando"),
+            confirm: async () => {
+                const result = await this.call("counter_finish", [...args, true]);
+                await this._afterFinish(result, locationOnly);
+            },
+            cancel: () => {},
+        });
+    }
+
+    async _afterFinish(result, locationOnly) {
+        const name = this.currentCount && this.currentCount.name;
+        await this.load();
+        if (locationOnly && this.currentCount && result.remaining) {
+            this.notification.add(_t("Ubicación terminada."), { type: "success" });
+            this.backToCount();
+            return;
+        }
+        if (!this.currentCount || result.state === "done") {
+            this.notification.add(
+                result.state === "done"
+                    ? _t("%s: conteo terminado y validado.", name)
+                    : _t("%s: conteo terminado y enviado a revisión.", name),
+                { type: "success", sticky: true }
+            );
+            this.state.countId = false;
+            this.state.locationId = false;
+            this.state.screen = "list";
+            return;
+        }
+        if (result.recount) {
+            this.notification.add(
+                _t("Conteo terminado. Quedan %s líneas para recontar.", result.recount),
+                { type: "warning", sticky: true }
+            );
+        }
+        this.backToCount();
     }
 }
 
