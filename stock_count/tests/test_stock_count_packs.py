@@ -27,7 +27,7 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
         )
         product.product_tmpl_id.uom_ids = [(4, pack.id)]
         if default:
-            product.product_tmpl_id.stock_count_pack_id = pack
+            product.product_tmpl_id.stock_count_pack_ids = [(4, pack.id)]
         if barcode:
             cls.env["product.uom"].create(
                 {"uom_id": pack.id, "product_id": product.id, "barcode": barcode}
@@ -51,9 +51,10 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
     def test_snapshot_and_two_boxes(self):
         count = self._count(self.egg | self.roller)
         egg, roller = self._line(count, self.egg), self._line(count, self.roller)
-        self.assertEqual(egg.count_pack_id, self.box)
-        self.assertEqual(egg.count_pack_factor, 30.0)
-        self.assertFalse(roller.count_pack_id, "sin unidad de recuento: se cuenta en su unidad")
+        self.assertEqual(
+            egg.count_units, [{"id": self.box.id, "name": "Caja x30", "factor": 30.0}]
+        )
+        self.assertFalse(roller.count_units, "sin unidad de recuento: se cuenta en su unidad")
 
         data = egg.sudo()._counter_line_data()
         self.assertEqual(data["pack"]["id"], self.box.id)
@@ -86,7 +87,8 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
         count = self._count(self.egg | self.roller)
         egg = self._line(count, self.egg)
         egg.write({"qty_counted": 95.0})
-        self.assertEqual((egg.qty_counted_packs, egg.qty_counted_loose), (3.0, 5.0))
+        self.assertEqual(egg.qty_counted_units, {str(self.box.id): 3.0})
+        self.assertEqual(egg.qty_counted_loose, 5.0)
 
     def test_scanning_a_pack_barcode_adds_one_pack(self):
         count = self._count(self.egg | self.roller)
@@ -119,12 +121,12 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
         plain = line.counter_set_pack(False)
         self.assertFalse(plain["pack"])
         self.assertEqual(plain["quantity"], 65, "lo ya cargado se conserva")
-        self.assertFalse(egg.count_pack_id)
+        self.assertFalse(egg.count_units)
         line.counter_set_quantity(70.0)
         six = line.counter_set_pack(self.sixpack.id)
         self.assertEqual(six["pack"]["id"], self.sixpack.id)
         self.assertEqual((six["packs"], six["loose"], six["quantity"]), (11, 4, 70))
-        self.assertEqual(egg.count_pack_factor, 6.0)
+        self.assertEqual(egg.count_units[0]["factor"], 6.0)
 
         foreign = self._make_pack(self.roller, "Bulto x4", 4.0)
         with self.assertRaises(UserError, msg="un embalaje de otro producto"):
@@ -143,7 +145,8 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
 
         second = line.counter_set_quantity(packs=13, loose=5)  # 395: −1,25 %
         self.assertEqual(second["quantity"], 395)
-        self.assertEqual((egg.qty_counted_packs, egg.qty_recount_packs), (10.0, 13.0))
+        box = str(self.box.id)
+        self.assertEqual((egg.qty_counted_units[box], egg.qty_recount_units[box]), (10.0, 13.0))
         self.assertEqual(egg.qty_final, 395.0)
         self.assertEqual(egg.state, "counted", "fuera de tolerancia: espera al supervisor")
         egg.with_user(self.supervisor).action_approve()
@@ -170,3 +173,56 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
         html = html.decode() if isinstance(html, bytes) else str(html)
         self.assertIn("Caja x30", html)
         self.assertIn("sueltas", html)
+
+    # ------------------------------------------------------------------
+    # Varias unidades de recuento: un casillero por unidad
+    # ------------------------------------------------------------------
+    def _pallet_count(self):
+        self.pallet = self._make_pack(
+            self.egg, "Pallet x120", 120.0, barcode="PL120", default=True
+        )
+        count = self._count()
+        return count, count.line_ids
+
+    def test_several_count_units_have_one_box_each(self):
+        count, egg = self._pallet_count()
+        pallet, box = self.pallet, self.box
+        self.assertEqual([unit["id"] for unit in egg.count_units], [pallet.id, box.id])
+        data = egg.sudo()._counter_line_data()
+        self.assertEqual([unit["name"] for unit in data["units"]], ["Pallet x120", "Caja x30"])
+        self.assertEqual(data["unit_mode"], "all")
+        self.assertIn("all", [option["id"] for option in data["pack_options"]])
+        self.assertTrue(egg.theoretical_breakdown.startswith("3 × Pallet x120 + 1 × Caja x30"))
+
+        line = self._as_counter(egg)
+        updated = line.counter_set_quantity(units={str(pallet.id): 3, str(box.id): 1}, loose=7)
+        self.assertEqual(updated["quantity"], 397)
+        self.assertEqual([unit["qty"] for unit in updated["units"]], [3, 1])
+        self.assertEqual(updated["loose"], 7)
+        self.assertEqual(egg.qty_counted, 397.0)
+        self.assertEqual(egg.counted_breakdown, "3 × Pallet x120 + 1 × Caja x30 + 7")
+
+        scanned = line.counter_add_quantity(120.0, pack_id=pallet.id)
+        self.assertEqual([unit["qty"] for unit in scanned["units"]], [4, 1])
+        self.assertEqual(scanned["quantity"], 517)
+        with self.assertRaises(UserError, msg="un embalaje que la línea no tiene"):
+            line.counter_set_quantity(units={str(self.sixpack.id): 1}, loose=0)
+
+    def test_counter_switches_between_one_unit_and_all(self):
+        count, egg = self._pallet_count()
+        line = self._as_counter(egg)
+        line.counter_set_quantity(units={str(self.pallet.id): 3, str(self.box.id): 1}, loose=7)
+        only_box = line.counter_set_pack(self.box.id)
+        self.assertEqual(only_box["unit_mode"], self.box.id)
+        self.assertEqual(
+            (only_box["packs"], only_box["loose"], only_box["quantity"]), (13, 7, 397)
+        )
+        everything = line.counter_set_pack("all")
+        self.assertEqual([unit["qty"] for unit in everything["units"]], [3, 1])
+        self.assertEqual(everything["loose"], 7)
+
+    def test_base_quantity_fills_the_biggest_unit_first(self):
+        count, egg = self._pallet_count()
+        egg.write({"qty_counted": 275.0})
+        self.assertEqual(egg.qty_counted_units, {str(self.pallet.id): 2.0, str(self.box.id): 1.0})
+        self.assertEqual(egg.qty_counted_loose, 5.0)

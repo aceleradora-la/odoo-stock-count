@@ -9,7 +9,7 @@
                 <group name="stock_count" string="Recuento de inventario">
                     <group>
                         <field name="uom_ids" invisible="1"/>
-                        <field name="stock_count_pack_id" options="{'no_create': True}" placeholder="Unidad de medida del producto"/>
+                        <field name="stock_count_pack_ids" widget="many2many_tags" options="{'no_create': True}" placeholder="Unidad de medida del producto"/>
                         <field name="stock_count_lock_mode" placeholder="El del recuento"/>
                         <field name="stock_count_custom"/>
                     </group>
@@ -31,7 +31,7 @@
         <field name="arch" type="xml">
             <xpath expr="//list" position="inside">
                 <field name="uom_ids" column_invisible="1"/>
-                <field name="stock_count_pack_id" optional="hide"/>
+                <field name="stock_count_pack_ids" widget="many2many_tags" optional="hide"/>
             </xpath>
         </field>
     </record>

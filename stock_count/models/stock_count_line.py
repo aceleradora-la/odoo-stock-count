@@ -24,16 +24,16 @@ BLIND_FIELDS = (
 )
 # Conteo en embalajes: por cada etapa, (embalajes, sueltas, cantidad en la unidad base).
 PACK_FIELDS = {
-    "counted": ("qty_counted_packs", "qty_counted_loose", "qty_counted"),
-    "recount": ("qty_recount_packs", "qty_recount_loose", "qty_recount"),
+    "counted": ("qty_counted_units", "qty_counted_loose", "qty_counted"),
+    "recount": ("qty_recount_units", "qty_recount_loose", "qty_recount"),
 }
 # Lo único que un contador puede escribir en una línea.
 COUNTER_WRITABLE_FIELDS = {
     "qty_counted",
     "qty_recount",
-    "qty_counted_packs",
+    "qty_counted_units",
     "qty_counted_loose",
-    "qty_recount_packs",
+    "qty_recount_units",
     "qty_recount_loose",
     "note",
     "reason_id",
@@ -126,30 +126,24 @@ class StockCountLine(models.Model):
         help="Diferencia valorizada al costo del producto.",
     )
     currency_id = fields.Many2one(related="company_id.currency_id")
-    count_pack_id = fields.Many2one(
-        "uom.uom",
-        string="Unidad de recuento",
+    count_units = fields.Json(
+        string="Unidades de recuento (datos)",
         readonly=True,
         copy=False,
-        help="Embalaje en el que se cuenta esta línea. Se toma del producto al confirmar "
-        "y el contador puede cambiarlo en la app.",
+        help="Embalajes en los que se cuenta esta línea, de mayor a menor, con su "
+        "equivalencia congelada: [{id, name, factor}]. Se toman del producto al confirmar "
+        "y el contador puede cambiarlos en la app.",
     )
-    count_pack_factor = fields.Float(
-        string="Unidades por embalaje",
-        digits="Product Unit of Measure",
-        readonly=True,
+    count_unit_names = fields.Char(string="Unidades de recuento", compute="_compute_breakdown")
+    qty_counted_units = fields.Json(
+        string="1er conteo: embalajes",
         copy=False,
-        help="Congelado en la línea: un cambio posterior del embalaje no altera el recuento.",
-    )
-    qty_counted_packs = fields.Float(
-        string="1er conteo: embalajes", digits="Product Unit of Measure"
+        help="Cantidad contada de cada embalaje: {embalaje: cantidad}.",
     )
     qty_counted_loose = fields.Float(
         string="1er conteo: sueltas", digits="Product Unit of Measure"
     )
-    qty_recount_packs = fields.Float(
-        string="2do conteo: embalajes", digits="Product Unit of Measure"
-    )
+    qty_recount_units = fields.Json(string="2do conteo: embalajes", copy=False)
     qty_recount_loose = fields.Float(
         string="2do conteo: sueltas", digits="Product Unit of Measure"
     )
@@ -251,12 +245,11 @@ class StockCountLine(models.Model):
             extra = {}
             if "unit_cost" not in vals:
                 extra["unit_cost"] = line._current_unit_cost()
-            if "count_pack_id" not in vals:
+            if "count_units" not in vals:
                 product = line.product_id.sudo()
-                pack = product._stock_count_default_pack()
-                if pack:
-                    extra["count_pack_id"] = pack.id
-                    extra["count_pack_factor"] = product._stock_count_pack_factor(pack)
+                units = product._stock_count_units_payload(product._stock_count_default_packs())
+                if units and product.tracking != "serial":
+                    extra["count_units"] = units
             if extra:
                 super(StockCountLine, line).write(extra)
         return lines
@@ -269,45 +262,85 @@ class StockCountLine(models.Model):
         self.ensure_one()
         return "recount" if self.state == "recount" or self.recounted_at else "counted"
 
-    def _split_packs(self, quantity):
-        """Cantidad en la unidad base → (embalajes enteros, sueltas)."""
+    def _units(self):
+        """Unidades de recuento de la línea: [{id, name, factor}], de mayor a menor."""
         self.ensure_one()
-        factor = self.count_pack_factor
-        if not self.count_pack_id or factor <= 0 or quantity <= 0:
-            return 0.0, quantity
+        return self.count_units or []
+
+    def _clean_unit_values(self, values):
+        """Valida {embalaje: cantidad} contra las unidades de recuento de la línea."""
+        self.ensure_one()
+        known = {str(unit["id"]) for unit in self._units()}
+        clean = {}
+        for key, qty in (values or {}).items():
+            qty = float(qty or 0.0)
+            if qty < 0:
+                raise UserError(self.env._("La cantidad no puede ser negativa."))
+            if not qty:
+                continue
+            if str(key) not in known:
+                raise UserError(
+                    self.env._(
+                        "%s no tiene esa unidad de recuento: cargá la cantidad en su unidad.",
+                        self.product_id.display_name,
+                    )
+                )
+            clean[str(key)] = qty
+        return clean
+
+    def _split_units(self, quantity):
+        """Cantidad en la unidad base → ({embalaje: cantidad}, sueltas), llenando primero
+        el embalaje más grande."""
+        self.ensure_one()
+        if quantity <= 0:
+            return {}, quantity
         rounding = self._rounding()
-        packs = float(int((quantity + rounding / 2.0) // factor))
-        loose = float_round(quantity - packs * factor, precision_rounding=rounding)
-        return packs, max(loose, 0.0)
+        values = {}
+        rest = quantity
+        for unit in self._units():
+            factor = unit["factor"]
+            if factor <= 0:
+                continue
+            number = float(int((rest + rounding / 2.0) // factor))
+            if number:
+                values[str(unit["id"])] = number
+                rest = max(float_round(rest - number * factor, precision_rounding=rounding), 0.0)
+        return values, rest
+
+    def _format_breakdown(self, values, loose):
+        self.ensure_one()
+        values = values or {}
+        parts = [
+            f"{values.get(str(unit['id']), 0.0):g} × {unit['name']}" for unit in self._units()
+        ]
+        return " + ".join([*parts, f"{loose or 0.0:g}"])
 
     def _breakdown(self, quantity):
         self.ensure_one()
-        if not self.count_pack_id:
+        if not self._units():
             return False
-        packs, loose = self._split_packs(quantity)
-        return f"{packs:g} × {self.count_pack_id.display_name} + {loose:g}"
+        return self._format_breakdown(*self._split_units(quantity))
 
     @api.depends(
-        "count_pack_id",
-        "count_pack_factor",
+        "count_units",
         "qty_final",
         "qty_theoretical",
         "state",
-        "qty_counted_packs",
+        "qty_counted_units",
         "qty_counted_loose",
-        "qty_recount_packs",
+        "qty_recount_units",
         "qty_recount_loose",
     )
     def _compute_breakdown(self):
         for line in self:
-            if not line.count_pack_id or line.state == "pending":
+            units = line._units()
+            if not units or line.state == "pending":
                 line.counted_breakdown = False
             else:
-                packs_f, loose_f, _qty_f = PACK_FIELDS[line._count_stage()]
-                line.counted_breakdown = (
-                    f"{line[packs_f]:g} × {line.count_pack_id.display_name} + {line[loose_f]:g}"
-                )
+                units_f, loose_f, _qty_f = PACK_FIELDS[line._count_stage()]
+                line.counted_breakdown = line._format_breakdown(line[units_f], line[loose_f])
             line.theoretical_breakdown = line._breakdown(line.qty_theoretical)
+            line.count_unit_names = " + ".join(unit["name"] for unit in units) or False
 
     def _rounding(self):
         self.ensure_one()
@@ -394,19 +427,18 @@ class StockCountLine(models.Model):
                     for line in self:
                         line.write(vals)
                     return True
-                packs = vals.get(packs_f, self[packs_f]) or 0.0
+                values = self._clean_unit_values(vals.get(packs_f, self[packs_f]))
                 loose = vals.get(loose_f, self[loose_f]) or 0.0
-                if packs and not self.count_pack_id:
-                    raise UserError(
-                        self.env._(
-                            "%s no tiene unidad de recuento: cargá la cantidad en su unidad.",
-                            self.product_id.display_name,
-                        )
-                    )
-                vals = dict(vals, **{qty_f: packs * self.count_pack_factor + loose})
+                factors = {str(unit["id"]): unit["factor"] for unit in self._units()}
+                total = sum(qty * factors[key] for key, qty in values.items()) + loose
+                vals = dict(vals, **{packs_f: values or False, qty_f: total})
             elif qty_f in vals and packs_f not in vals and loose_f not in vals:
                 derive.append((packs_f, loose_f, qty_f))
-        if any(vals.get(name, 0.0) < 0 for names in PACK_FIELDS.values() for name in names):
+        if any(
+            (vals.get(name) or 0.0) < 0
+            for _units_f, loose_f, qty_f in PACK_FIELDS.values()
+            for name in (loose_f, qty_f)
+        ):
             raise UserError(self.env._("La cantidad no puede ser negativa."))
         counting = "qty_counted" in vals or "qty_recount" in vals
         if counting and not self.env.context.get("stock_count_skip_checks"):
@@ -422,9 +454,9 @@ class StockCountLine(models.Model):
         # Cantidad base cargada directo (escritorio, cierre en cero): se reparte en
         # embalajes enteros y sueltas para que la app y los reportes la muestren igual.
         for packs_f, loose_f, qty_f in derive:
-            for line in self.filtered("count_pack_id"):
-                packs, loose = line._split_packs(vals[qty_f])
-                super(StockCountLine, line).write({packs_f: packs, loose_f: loose})
+            for line in self.filtered(lambda line: line._units()):
+                values, loose = line._split_units(vals[qty_f])
+                super(StockCountLine, line).write({packs_f: values or False, loose_f: loose})
         if counting:
             # Una cantidad cargada a mano deja de ser un "cierre en cero"
             zero_fill = bool(self.env.context.get("stock_count_zero_fill"))
@@ -491,7 +523,7 @@ class StockCountLine(models.Model):
             {
                 "state": "recount",
                 "qty_recount": 0.0,
-                "qty_recount_packs": 0.0,
+                "qty_recount_units": False,
                 "qty_recount_loose": 0.0,
             }
         )
@@ -597,7 +629,8 @@ class StockCountLine(models.Model):
     def _counter_line_data(self):
         self.ensure_one()
         packs_f, loose_f, qty_f = PACK_FIELDS[self._count_stage()]
-        pack = self.count_pack_id
+        values = self[packs_f] or {}
+        units = [dict(unit, qty=values.get(str(unit["id"]), 0.0)) for unit in self._units()]
         return {
             "id": self.id,
             "count_id": self.count_id.id,
@@ -619,31 +652,33 @@ class StockCountLine(models.Model):
             "is_recount": self.state == "recount",
             "done": self.state == "counted",
             "quantity": self[qty_f],
-            "pack": {
-                "id": pack.id,
-                "name": pack.display_name,
-                "factor": self.count_pack_factor,
-            }
-            if pack
-            else False,
-            "packs": self[packs_f],
+            # Un casillero por unidad de recuento, más las sueltas
+            "units": units,
+            "unit_mode": "all" if len(units) > 1 else (units[0]["id"] if units else False),
+            # La primera unidad, para las versiones de la app que manejaban una sola
+            "pack": {key: units[0][key] for key in ("id", "name", "factor")} if units else False,
+            "packs": units[0]["qty"] if units else 0.0,
             "loose": self[loose_f],
             "pack_options": self._counter_pack_options(),
             "note": self.note or "",
         }
 
     def _counter_pack_options(self):
-        """Unidades entre las que el contador puede elegir para este renglón."""
+        """Unidades entre las que el contador puede elegir para este renglón: la del
+        producto, cada embalaje y, si el producto tiene varias unidades de recuento,
+        todas juntas."""
         self.ensure_one()
         product = self.product_id
-        packs = product._stock_count_packs() | self.count_pack_id
-        if not packs or self._is_serial():
+        current = {unit["id"]: unit for unit in self._units()}
+        packs = product._stock_count_packs()
+        if (not packs and not current) or self._is_serial():
             return []
         options = [{"id": False, "name": self.product_uom_id.name, "factor": 1.0}]
+        listed = set()
         for pack in packs:
             factor = (
-                self.count_pack_factor
-                if pack == self.count_pack_id
+                current[pack.id]["factor"]
+                if pack.id in current
                 else product._stock_count_pack_factor(pack)
             )
             # "Paquete x 126" ya dice cuánto trae; "Cajón" necesita la aclaración
@@ -651,6 +686,19 @@ class StockCountLine(models.Model):
             if f"{factor:g}" not in label:
                 label = f"{label} · {factor:g} {self.product_uom_id.name}"
             options.append({"id": pack.id, "name": label, "factor": factor})
+            listed.add(pack.id)
+        for unit in current.values():
+            if unit["id"] not in listed:
+                options.append({"id": unit["id"], "name": unit["name"], "factor": unit["factor"]})
+        several = (
+            list(current.values())
+            if len(current) > 1
+            else product._stock_count_units_payload(product._stock_count_default_packs())
+        )
+        if len(several) > 1:
+            options.append(
+                {"id": "all", "name": " + ".join(unit["name"] for unit in several), "factor": 0.0}
+            )
         return options
 
     @api.model
@@ -806,15 +854,26 @@ class StockCountLine(models.Model):
                     return found_product(product, None, quantity or 1.0)
         return result
 
-    def counter_set_quantity(self, quantity=None, packs=None, loose=None):
+    def counter_set_quantity(self, quantity=None, packs=None, loose=None, units=None):
         """Carga primer o segundo conteo según el estado de la línea: una cantidad en la
-        unidad del producto, o embalajes + sueltas si la línea tiene unidad de recuento."""
+        unidad del producto, o `units` ({embalaje: cantidad}) + sueltas si la línea tiene
+        unidades de recuento. `packs` es la cantidad de la primera unidad (compatibilidad)."""
         self.ensure_one()
         packs_f, loose_f, qty_f = PACK_FIELDS[self._count_stage()]
         was_recount = self.state == "recount"
         was_ready = self.count_state == "ready"
-        if packs is not None or loose is not None:
-            self.write({packs_f: packs or 0.0, loose_f: loose or 0.0})
+        if units is None and packs is not None:
+            first = self._units()[:1]
+            if packs and not first:
+                raise UserError(
+                    self.env._(
+                        "%s no tiene unidad de recuento: cargá la cantidad en su unidad.",
+                        self.product_id.display_name,
+                    )
+                )
+            units = {str(first[0]["id"]): packs} if first else {}
+        if units is not None or loose is not None:
+            self.write({packs_f: units or {}, loose_f: loose or 0.0})
         else:
             self.write({qty_f: quantity or 0.0})
         data = self.sudo()._counter_line_data()
@@ -825,30 +884,33 @@ class StockCountLine(models.Model):
         return data
 
     def counter_set_pack(self, pack_id=False):
-        """El contador cambia la unidad en la que cuenta este renglón: la unidad del
-        producto (sin embalaje) o uno de sus embalajes. Lo ya cargado se conserva."""
+        """El contador cambia en qué cuenta este renglón: la unidad del producto (False),
+        uno de sus embalajes (id) o todas sus unidades de recuento ("all"). Lo ya cargado
+        se conserva."""
         self.ensure_one()
         self.check_access("write")
         self._check_can_count()
         product = self.product_id.sudo()
-        pack = (product._stock_count_packs() | self.sudo().count_pack_id).filtered(
-            lambda candidate: candidate.id == pack_id
-        )
-        if pack_id and not pack:
-            raise UserError(self.env._("Ese embalaje no es de %s.", product.display_name))
         line = self.sudo()
-        vals = {
-            "count_pack_id": pack.id,
-            "count_pack_factor": (
-                line.count_pack_factor
-                if pack and pack == line.count_pack_id
-                else product._stock_count_pack_factor(pack)
-            ),
-        }
-        super(StockCountLine, line).write(vals)
+        current = {unit["id"]: unit for unit in line._units()}
+        if pack_id == "all":
+            packs = product._stock_count_default_packs()
+        else:
+            packs = product._stock_count_packs().filtered(
+                lambda candidate: candidate.id == pack_id
+            )
+            if pack_id and not packs and pack_id not in current:
+                raise UserError(self.env._("Ese embalaje no es de %s.", product.display_name))
+        # La equivalencia ya congelada en la línea se conserva
+        units = [
+            current.get(unit["id"], unit) for unit in product._stock_count_units_payload(packs)
+        ]
+        if not units and pack_id in current:
+            units = [current[pack_id]]
+        super(StockCountLine, line).write({"count_units": units or False})
         for packs_f, loose_f, qty_f in PACK_FIELDS.values():
-            packs, loose = line._split_packs(line[qty_f])
-            super(StockCountLine, line).write({packs_f: packs, loose_f: loose})
+            values, loose = line._split_units(line[qty_f])
+            super(StockCountLine, line).write({packs_f: values or False, loose_f: loose})
         return line._counter_line_data()
 
     def counter_add_quantity(self, delta=1.0, pack_id=False, op_uid=False):
@@ -875,14 +937,18 @@ class StockCountLine(models.Model):
                 data["serial_already"] = True
                 return data
             return self.counter_set_quantity(1.0)
-        if self.count_pack_id:
-            packs, loose = self[packs_f], self[loose_f]
-            factor = self.count_pack_factor
-            if pack_id and pack_id == self.count_pack_id.id and factor > 0:
-                packs += round(delta / factor)
+        units = self._units()
+        if units:
+            values, loose = dict(self[packs_f] or {}), self[loose_f]
+            unit = next(
+                (unit for unit in units if unit["id"] == pack_id and unit["factor"] > 0), None
+            )
+            if pack_id and unit:
+                key = str(unit["id"])
+                values[key] = values.get(key, 0.0) + round(delta / unit["factor"])
             else:
                 loose += delta
-            return self.counter_set_quantity(packs=packs, loose=loose)
+            return self.counter_set_quantity(units=values, loose=loose)
         return self.counter_set_quantity(current + delta)
 
     @api.model
@@ -1013,7 +1079,7 @@ class StockCountLine(models.Model):
             {
                 "state": "recount",
                 "qty_recount": 0.0,
-                "qty_recount_packs": 0.0,
+                "qty_recount_units": False,
                 "qty_recount_loose": 0.0,
                 "recounted_by_id": False,
                 "recounted_at": False,

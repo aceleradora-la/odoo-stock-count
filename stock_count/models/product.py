@@ -42,21 +42,27 @@ class ProductTemplate(models.Model):
     _name = "product.template"
     _inherit = ["product.template", "stock.count.params.mixin"]
 
-    stock_count_pack_id = fields.Many2one(
+    stock_count_pack_ids = fields.Many2many(
         "uom.uom",
-        string="Unidad de recuento",
+        "product_template_stock_count_uom_rel",
+        "product_tmpl_id",
+        "uom_id",
+        string="Unidades de recuento",
         domain="[('id', 'in', uom_ids)]",
-        help="Embalaje en el que se cuenta este producto en los recuentos de inventario: "
-        "el contador carga embalajes y unidades sueltas. Vacío = se cuenta en la unidad "
-        "de medida del producto. Se elige entre los embalajes del producto.",
+        help="Embalajes en los que se cuenta este producto en los recuentos de inventario: "
+        "el contador carga cada embalaje y las unidades sueltas en casilleros separados. "
+        "Vacío = se cuenta en la unidad de medida del producto. Se eligen entre los "
+        "embalajes del producto.",
     )
 
-    @api.constrains("stock_count_pack_id", "uom_id")
-    def _check_stock_count_pack_id(self):
+    @api.constrains("stock_count_pack_ids", "uom_id")
+    def _check_stock_count_pack_ids(self):
         for template in self:
-            pack = template.stock_count_pack_id
-            if not pack:
-                continue
+            for pack in template.stock_count_pack_ids:
+                template._check_stock_count_pack(pack)
+
+    def _check_stock_count_pack(self, pack):
+        for template in self:
             if pack == template.uom_id:
                 raise ValidationError(
                     self.env._(
@@ -84,11 +90,28 @@ class ProductProduct(models.Model):
     def _stock_count_packs(self):
         """Embalajes en los que se puede contar este producto."""
         self.ensure_one()
-        return (self.uom_ids | self.stock_count_pack_id) - self.uom_id
+        return (self.uom_ids | self.stock_count_pack_ids) - self.uom_id
 
-    def _stock_count_default_pack(self):
+    def _stock_count_default_packs(self):
+        """Unidades de recuento del producto: las que toma una línea nueva."""
         self.ensure_one()
-        return self.stock_count_pack_id
+        return self.stock_count_pack_ids
+
+    def _stock_count_units_payload(self, packs):
+        """Embalajes → [{id, name, factor}] de mayor a menor, con la equivalencia en la
+        unidad del producto. Es lo que la línea guarda congelado."""
+        self.ensure_one()
+        units = [
+            {
+                "id": pack.id,
+                "name": pack.display_name,
+                "factor": self._stock_count_pack_factor(pack),
+            }
+            for pack in packs
+        ]
+        return sorted(
+            (unit for unit in units if unit["factor"] > 0), key=lambda unit: -unit["factor"]
+        )
 
     def _stock_count_pack_factor(self, pack):
         """Cuántas unidades de medida del producto trae un embalaje."""
