@@ -96,7 +96,8 @@ Funciones de la pantalla de conteo:
   y abre directo en Recuentos.
 
 También se puede contar desde *Mis líneas de conteo*, desde las líneas del recuento o
-sobre la **hoja de conteo** impresa.
+sobre la **hoja de conteo** impresa. En esas listas, una línea sin contar muestra la
+cantidad vacía; escribir 0 la deja contada en cero.
 
 ## Conteo en embalajes
 

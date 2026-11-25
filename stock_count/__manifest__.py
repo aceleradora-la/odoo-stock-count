@@ -2,7 +2,7 @@
     "name": "Recuento de inventario",
     "summary": "Recuentos físicos con conteo desde el celular, reconteo, aprobación "
     "y ajuste de inventario",
-    "version": "18.0.9.2.0",
+    "version": "18.0.9.2.1",
     "category": "Inventory/Inventory",
     "author": "aceleradora.la",
     "website": "https://github.com/aceleradora-la/odoo-stock-count",
@@ -32,6 +32,7 @@
     ],
     "assets": {
         "web.assets_backend": [
+            "stock_count/static/src/fields/count_qty_field.js",
             "stock_count/static/src/counter/counter.scss",
             "stock_count/static/src/counter/counter.xml",
             "stock_count/static/src/counter/number_input.js",
