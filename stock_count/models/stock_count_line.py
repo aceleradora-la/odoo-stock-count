@@ -625,9 +625,11 @@ class StockCountLine(models.Model):
                 if pack == self.count_pack_id
                 else product._stock_count_pack_factor(pack)
             )
-            options.append(
-                {"id": pack.id, "name": f"{pack.display_name} · {factor:g}", "factor": factor}
-            )
+            # "Paquete x 126" ya dice cuánto trae; "Cajón" necesita la aclaración
+            label = pack.display_name
+            if f"{factor:g}" not in label:
+                label = f"{label} · {factor:g} {self.product_uom_id.name}"
+            options.append({"id": pack.id, "name": label, "factor": factor})
         return options
 
     @api.model
