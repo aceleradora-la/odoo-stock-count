@@ -428,3 +428,40 @@ class TestStockCountCounterTour(Phase3Common, HttpCase):
             login="admin",
         )
         self.assertTrue(count.line_ids.filtered(lambda line: line.state == "counted"))
+
+    def _desktop_count(self):
+        admin = self.env.ref("base.user_admin")
+        count = self._create_count(counter_ids=[(6, 0, admin.ids)], user_id=admin.id)
+        count.action_confirm()
+        count.action_start()
+        count.line_ids.write({"assigned_user_id": admin.id})
+        return count, admin
+
+    def _assert_first_line_counted_zero(self, count, admin):
+        counted = count.line_ids.filtered(lambda line: line.state != "pending")
+        self.assertEqual(len(counted), 1, "solo la línea donde se escribió el 0")
+        self.assertEqual(counted, count.line_ids.sorted()[0])
+        self.assertEqual(counted.state, "counted")
+        self.assertEqual(counted.qty_counted, 0.0)
+        self.assertEqual(counted.counted_by_id, admin)
+        self.assertFalse(counted.zero_filled, "lo escribió el usuario: no es un cierre en cero")
+
+    def test_desktop_zero_in_my_lines(self):
+        """Escritorio, Mis líneas de conteo: un 0 escrito deja la línea contada."""
+        count, admin = self._desktop_count()
+        self.start_tour(
+            "/odoo/action-stock_count.stock_count_line_action_mine",
+            "stock_count_desktop_zero_list",
+            login="admin",
+        )
+        self._assert_first_line_counted_zero(count, admin)
+
+    def test_desktop_zero_in_count_form(self):
+        """Escritorio, líneas del recuento: un 0 escrito deja la línea contada."""
+        count, admin = self._desktop_count()
+        self.start_tour(
+            f"/odoo/action-stock_count.stock_count_action/{count.id}",
+            "stock_count_desktop_zero_form",
+            login="admin",
+        )
+        self._assert_first_line_counted_zero(count, admin)

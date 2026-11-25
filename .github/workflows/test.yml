@@ -43,13 +43,19 @@ jobs:
       - name: Install and test modules inside the official Odoo image
         run: |
           set -o pipefail
-          docker run --rm --network host \
+          # Chrome y websocket-client: sin ellos Odoo saltea las pruebas de navegador (tours)
+          docker run --rm --network host --user root --entrypoint bash \
             -v "$PWD:/mnt/extra-addons:ro" \
-            -e HOST=localhost -e USER=odoo -e PASSWORD=odoo \
-            odoo:${ODOO_VERSION} \
-            odoo -d test_odoo_stock_count \
-              --db_host=localhost --db_user=odoo --db_password=odoo \
-              --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
-              -i ${MODULES} --test-enable --test-tags "/stock_count,/stock_count_cycle" \
-              --stop-after-init --log-level=test 2>&1 | tee odoo-test.log
+            odoo:${ODOO_VERSION} -c "
+              set -e
+              apt-get update -qq
+              apt-get install -y -qq --no-install-recommends wget python3-websocket > /dev/null
+              wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+              apt-get install -y -qq /tmp/chrome.deb > /dev/null
+              runuser -u odoo -- odoo -d test_odoo_stock_count \
+                --db_host=localhost --db_user=odoo --db_password=odoo \
+                --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
+                -i ${MODULES} --test-enable --test-tags '/stock_count,/stock_count_cycle' \
+                --stop-after-init --log-level=test
+            " 2>&1 | tee odoo-test.log
           ! grep -E "^.* (ERROR|CRITICAL) " odoo-test.log
