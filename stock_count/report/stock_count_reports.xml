@@ -91,6 +91,19 @@
     </template>
 
     <!-- ===================== Informe de diferencias ===================== -->
+    <record id="paperformat_count_diff" model="report.paperformat">
+        <field name="name">Recuento: informe de diferencias (A4 apaisado)</field>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">52</field>
+        <field name="margin_bottom">32</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">52</field>
+        <field name="dpi">90</field>
+    </record>
+
     <record id="action_report_count_diff" model="ir.actions.report">
         <field name="name">Informe de diferencias</field>
         <field name="model">stock.count</field>
@@ -98,6 +111,7 @@
         <field name="report_name">stock_count.report_count_diff</field>
         <field name="report_file">stock_count.report_count_diff</field>
         <field name="print_report_name">'Diferencias %s' % object.name.replace('/', '_')</field>
+        <field name="paperformat_id" ref="stock_count.paperformat_count_diff"/>
         <field name="binding_model_id" ref="model_stock_count"/>
         <field name="binding_type">report</field>
         <field name="group_ids" eval="[(4, ref('stock_count.group_stock_count_manager'))]"/>
@@ -131,7 +145,20 @@
                         </div>
 
                         <h4>Líneas con diferencia (<span t-out="len(data['with_diff'])"/>)</h4>
-                        <table class="table table-sm o_main_table" t-if="data['with_diff']">
+                        <table class="table table-sm o_main_table" t-if="data['with_diff']" style="width:100%; table-layout:fixed; font-size:0.85em; word-wrap:break-word;">
+                            <colgroup>
+                                <col style="width:13%"/>
+                                <col style="width:22%"/>
+                                <col style="width:8%"/>
+                                <col style="width:8%"/>
+                                <col style="width:8%"/>
+                                <col style="width:8%" t-if="doc.has_recount"/>
+                                <col style="width:8%"/>
+                                <col style="width:5%"/>
+                                <col style="width:11%"/>
+                                <col style="width:9%"/>
+                                <col/>
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Ubicación</th>
@@ -169,7 +196,7 @@
                             <tfoot>
                                 <tr>
                                     <td t-att-colspan="6 if doc.has_recount else 5" class="text-end"><strong>Total</strong></td>
-                                    <td class="text-end"><strong t-out="'%+.2f' % sum(data['with_diff'].mapped('qty_diff'))"/></td>
+                                    <td></td>
                                     <td></td>
                                     <td class="text-end"><strong t-out="data['total_value']" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/></td>
                                     <td colspan="2"></td>

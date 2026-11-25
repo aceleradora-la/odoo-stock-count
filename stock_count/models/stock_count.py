@@ -179,7 +179,12 @@ class StockCount(models.Model):
         currency_field="currency_id",
     )
     accuracy = fields.Float(
-        string="Precisión (%)", compute="_compute_line_stats", store=True, digits=(16, 2)
+        string="Precisión (%)",
+        compute="_compute_line_stats",
+        store=True,
+        digits=(16, 2),
+        help="Líneas contadas sin diferencia o con una diferencia dentro de 'Aprobar "
+        "automáticamente hasta (%)', sobre el total de líneas contadas.",
     )
     progress = fields.Float(string="Avance (%)", compute="_compute_line_stats", store=True)
     moved_count = fields.Integer(compute="_compute_line_stats", store=True)
@@ -219,12 +224,13 @@ class StockCount(models.Model):
         "line_ids.qty_final",
         "line_ids.moved_during_count",
         "line_ids.recounted_at",
+        "auto_approve_tolerance_pct",
     )
     def _compute_line_stats(self):
         for count in self:
             # Una sola pasada: se recalcula con cada cantidad cargada.
             # Una línea en reconteo ya tiene un primer conteo: cuenta como contada.
-            total = counted = recount = effective = with_diff = moved = 0
+            total = counted = recount = effective = with_diff = moved = inexact = 0
             diff_value = 0.0
             has_recount = False
             for line in count.line_ids:
@@ -245,6 +251,8 @@ class StockCount(models.Model):
                 if not line._is_diff_zero():
                     with_diff += 1
                     diff_value += line.diff_value
+                    if not count._line_is_accurate(line):
+                        inexact += 1
             count.line_count = total
             count.counted_count = counted
             count.pending_count = total - counted
@@ -254,7 +262,7 @@ class StockCount(models.Model):
             count.progress = 100.0 * counted / total if total else 0.0
             count.moved_count = moved
             count.has_recount = has_recount
-            count.accuracy = 100.0 * (effective - with_diff) / effective if effective else 0.0
+            count.accuracy = 100.0 * (effective - inexact) / effective if effective else 0.0
 
     def _compute_is_manager(self):
         is_manager = self.env.user.has_group("stock_count.group_stock_count_manager")
@@ -450,7 +458,8 @@ class StockCount(models.Model):
     # Transiciones
     # ------------------------------------------------------------------
     def action_confirm(self):
-        """Borrador → Confirmado: snapshot del teórico y toma de los quants."""
+        """Borrador → Confirmado: genera las líneas para repartirlas e imprimir la hoja.
+        El teórico definitivo y el bloqueo de movimientos llegan al iniciar el conteo."""
         self._check_state(("draft",), self.env._("confirmar"))
         for count in self:
             if not count.location_ids:
@@ -472,25 +481,178 @@ class StockCount(models.Model):
             count._check_no_overlapping_count(vals_list)
             count.line_ids.unlink()
             lines = self.env["stock.count.line"].create(vals_list)
-            for line in lines.filtered("quant_id"):
-                line.quant_id.sudo().count_line_id = line
-            count.write({"state": "ready", "date_start": fields.Datetime.now()})
+            count.write({"state": "ready"})
             count.message_post(
                 subtype_xmlid="mail.mt_note",
                 body=self.env._(
-                    "Recuento confirmado. %(lines)s líneas generadas con la cantidad teórica "
-                    "congelada. Bloqueo de movimientos: %(lock)s.",
+                    "Recuento confirmado. %(lines)s líneas generadas. El teórico se actualiza "
+                    "y el bloqueo de movimientos empieza al iniciar el conteo.",
                     lines=len(lines),
-                    lock=dict(LOCK_MODES)[count.lock_mode],
                 ),
             )
         return True
 
     def action_start(self):
-        """Confirmado → En conteo."""
+        """Confirmado → En conteo: toma el teórico de este momento y empieza el bloqueo."""
         self._check_state(("ready",), self.env._("iniciar"))
-        self.write({"state": "counting"})
+        for count in self:
+            updated, added, removed = count._refresh_snapshot()
+            count.write({"state": "counting", "date_start": fields.Datetime.now()})
+            count.message_post(
+                subtype_xmlid="mail.mt_note",
+                body=self.env._(
+                    "Conteo iniciado con el teórico de este momento. Desde la confirmación: "
+                    "%(updated)s líneas actualizadas, %(added)s agregadas y %(removed)s "
+                    "quitadas. Bloqueo de movimientos: %(lock)s.",
+                    updated=updated,
+                    added=added,
+                    removed=removed,
+                    lock=dict(LOCK_MODES)[count.lock_mode],
+                ),
+            )
         return True
+
+    def _refresh_snapshot(self):
+        """Pone las líneas al día con el stock de este momento y toma los quants.
+
+        Entre la confirmación y el inicio el stock se sigue moviendo. Al iniciar, cada
+        línea toma la cantidad del sistema de ese momento, el stock nuevo del alcance
+        agrega líneas y las líneas pendientes cuyo stock ya no está se quitan. Devuelve
+        cuántas líneas se actualizaron, agregaron y quitaron."""
+        self.ensure_one()
+        Line = self.env["stock.count.line"].sudo()
+        keep = set(self.env.context.get("stock_count_keep_line_ids") or [])
+        vals_list = self._prepare_line_vals_list()
+        self.sudo()._check_no_overlapping_count(vals_list)
+        existing = {}
+        for line in Line.search([("count_id", "=", self.id)]):
+            key = (
+                line.product_id.id,
+                line.location_id.id,
+                line.lot_id.id,
+                line.package_id.id,
+                line.owner_id.id,
+            )
+            existing.setdefault(key, line)
+        updated = 0
+        seen = Line
+        to_create = []
+        for vals in vals_list:
+            key = (
+                vals["product_id"],
+                vals["location_id"],
+                vals.get("lot_id") or False,
+                vals.get("package_id") or False,
+                vals.get("owner_id") or False,
+            )
+            line = existing.get(key)
+            if not line:
+                to_create.append(vals)
+                continue
+            seen |= line
+            updated += line._set_snapshot(vals.get("quant_id") or False, vals["qty_theoretical"])
+        to_unlink = Line
+        for line in Line.union(*existing.values()) - seen:
+            if line.state == "pending" and line.id not in keep:
+                to_unlink |= line
+                continue
+            # Ya contada (producto no esperado, o la línea que se está cargando): se
+            # queda, con lo que el sistema tenga ahora para esa clave.
+            quant = (
+                self.env["stock.quant"]
+                .sudo()
+                ._gather(
+                    line.product_id,
+                    line.location_id,
+                    lot_id=line.lot_id,
+                    package_id=line.package_id,
+                    owner_id=line.owner_id,
+                    strict=True,
+                )[:1]
+            )
+            updated += line._set_snapshot(quant.id, quant.quantity if quant else 0.0)
+        removed = len(to_unlink)
+        to_unlink.unlink()
+        new_lines = Line.create(to_create)
+        lines = Line.search([("count_id", "=", self.id)])
+        # Una línea nueva en una ubicación que ya tiene un único contador es de él.
+        for line in new_lines:
+            siblings = (lines - new_lines).filtered(
+                lambda other, line=line: other.location_id == line.location_id
+            )
+            users = siblings.assigned_user_id
+            if len(users) == 1 and all(sibling.assigned_user_id for sibling in siblings):
+                line.assigned_user_id = users
+        for line in lines.filtered("quant_id"):
+            line.quant_id.sudo().count_line_id = line
+        return updated, len(new_lines), removed
+
+    # ------------------------------------------------------------------
+    # Avisos: quién tiene que actuar
+    # ------------------------------------------------------------------
+    def _sync_review_activities(self):
+        """Deja una actividad a quien tiene que actuar y cierra las que ya no aplican.
+
+        - Al supervisor del recuento, mientras haya líneas contadas para aprobar.
+        - A cada contador, mientras tenga líneas para recontar en un recuento en revisión.
+        """
+        review_type = "stock_count.mail_activity_count_review"
+        recount_type = "stock_count.mail_activity_count_recount"
+        review = self.env.ref(review_type, raise_if_not_found=False)
+        recount = self.env.ref(recount_type, raise_if_not_found=False)
+        if not review or not recount:
+            return
+        for count in self.sudo():
+            activities = count.activity_ids
+            in_review = count.state == "review"
+            to_approve = count.line_ids.filtered(lambda line: line.state == "counted")
+            in_recount = count.line_ids.filtered(lambda line: line.state == "recount")
+            # --- supervisor
+            mine = activities.filtered(lambda act: act.activity_type_id == review)
+            if in_review and to_approve and count.user_id:
+                if not mine:
+                    count.activity_schedule(
+                        review_type,
+                        user_id=count.user_id.id,
+                        note=self.env._(
+                            "%(name)s tiene %(approve)s líneas para aprobar y %(recount)s "
+                            "en reconteo.",
+                            name=count.name,
+                            approve=len(to_approve),
+                            recount=len(in_recount),
+                        ),
+                    )
+            elif mine:
+                if count.state in ("review", "done"):
+                    count.activity_feedback([review_type])
+                else:
+                    count.activity_unlink([review_type])
+            # --- contadores con reconteos
+            users = self.env["res.users"]
+            if in_review:
+                for line in in_recount:
+                    users |= line.assigned_user_id or line.counted_by_id
+            open_recount = activities.filtered(lambda act: act.activity_type_id == recount)
+            for user in users - open_recount.user_id:
+                if not count.with_user(user).has_access("read"):
+                    continue
+                lines = in_recount.filtered(
+                    lambda line, user=user: (line.assigned_user_id or line.counted_by_id) == user
+                )
+                count.activity_schedule(
+                    recount_type,
+                    user_id=user.id,
+                    note=self.env._(
+                        "%(name)s: %(n)s líneas para contar de nuevo. Abrí la app Recuentos.",
+                        name=count.name,
+                        n=len(lines),
+                    ),
+                )
+            for user in open_recount.user_id - users:
+                if count.state in ("review", "done"):
+                    count.activity_feedback([recount_type], user_id=user.id)
+                else:
+                    count.activity_unlink([recount_type], user_id=user.id)
 
     def _auto_review(self):
         """Sin líneas pendientes ni en reconteo, el recuento en conteo pasa solo a
@@ -521,6 +683,25 @@ class StockCount(models.Model):
         if self.recount_min_value > 0 and abs(line.diff_value) < self.recount_min_value:
             return False
         return bool(over_qty or over_pct)
+
+    def _line_is_accurate(self, line):
+        """Para la precisión: sin diferencia o dentro de la tolerancia de aprobación."""
+        self.ensure_one()
+        if line._is_diff_zero():
+            return True
+        if not line.qty_theoretical:
+            return False
+        return abs(line.diff_pct) <= self._line_params(line)["auto_approve_tolerance_pct"]
+
+    def _line_params(self, line):
+        """Umbrales que rigen una línea. Hoy son los del recuento."""
+        self.ensure_one()
+        return {
+            "recount_threshold_pct": self.recount_threshold_pct,
+            "recount_threshold_qty": self.recount_threshold_qty,
+            "auto_approve_tolerance_pct": self.auto_approve_tolerance_pct,
+            "recount_min_value": self.recount_min_value,
+        }
 
     def _line_within_tolerance(self, line):
         """Tolerancia de aprobación automática. 100 % o más significa aprobar todo lo
@@ -577,6 +758,7 @@ class StockCount(models.Model):
                 ),
             )
         (self - already)._try_auto_validate()
+        (self - already)._sync_review_activities()
         return True
 
     def action_approve_all(self):
@@ -728,6 +910,7 @@ class StockCount(models.Model):
                     ok=len(to_apply) - len(adjusted),
                 ),
             )
+            count._sync_review_activities()
         return True
 
     def action_apply_force(self):
@@ -738,6 +921,7 @@ class StockCount(models.Model):
         for count in self:
             count._release_quants()
         self.write({"state": "cancel"})
+        self._sync_review_activities()
         return True
 
     def action_draft(self):
@@ -747,6 +931,7 @@ class StockCount(models.Model):
             count._release_quants()
             count.line_ids.unlink()
         self.write({"state": "draft", "date_start": False, "date_end": False})
+        self._sync_review_activities()
         return True
 
     def _add_unexpected_line(self, product, location, lot=None, quantity=0.0, **extra):

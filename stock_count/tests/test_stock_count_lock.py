@@ -127,6 +127,7 @@ class TestStockCountLock(TransactionCase):
     def test_block_delivery_but_allow_reservation(self):
         count = self._create_count()
         count.action_confirm()
+        count.action_start()
         picking = self._delivery(self.screw, 5.0)
         self.assertEqual(picking.state, "assigned", "la reserva no se bloquea")
         with self.assertRaises(UserError) as err:
@@ -139,6 +140,7 @@ class TestStockCountLock(TransactionCase):
     def test_block_receipt_into_counted_location(self):
         count = self._create_count()
         count.action_confirm()
+        count.action_start()
         picking = self._receipt(self.screw, 20.0)
         with self.assertRaises(UserError):
             picking.button_validate()
@@ -147,6 +149,7 @@ class TestStockCountLock(TransactionCase):
     def test_block_only_the_counted_key(self):
         count = self._create_count(scope="products", product_ids=[(6, 0, self.screw.ids)])
         count.action_confirm()
+        count.action_start()
         # Otro producto en la misma ubicación: pasa
         other_product = self._delivery(self.roller, 2.0)
         other_product.button_validate()
@@ -160,6 +163,7 @@ class TestStockCountLock(TransactionCase):
     def test_block_respects_lot(self):
         count = self._create_count(scope="lots", lot_ids=[(6, 0, self.lot_b.ids)])
         count.action_confirm()
+        count.action_start()
         blocked = self._delivery(self.paint, 1.0, lot=self.lot_b)
         with self.assertRaises(UserError):
             blocked.button_validate()
@@ -171,6 +175,7 @@ class TestStockCountLock(TransactionCase):
     def test_lock_released_after_apply_and_cancel(self):
         count = self._create_count(scope="products", product_ids=[(6, 0, self.screw.ids)])
         count.action_confirm()
+        count.action_start()
         picking = self._delivery(self.screw, 5.0)
         with self.assertRaises(UserError):
             picking.button_validate()
@@ -205,6 +210,7 @@ class TestStockCountLock(TransactionCase):
     def test_lock_mode_none_does_nothing(self):
         count = self._create_count(lock_mode="none")
         count.action_confirm()
+        count.action_start()
         picking = self._delivery(self.screw, 5.0)
         picking.button_validate()
         self.assertEqual(picking.state, "done")
@@ -253,6 +259,7 @@ class TestStockCountLock(TransactionCase):
     def test_native_apply_is_blocked_on_taken_quant(self):
         count = self._create_count(scope="products", product_ids=[(6, 0, self.screw.ids)])
         count.action_confirm()
+        count.action_start()
         quant = count.line_ids.quant_id
         self.assertEqual(quant.count_id, count)
         quant.inventory_quantity = 77.0
@@ -264,3 +271,59 @@ class TestStockCountLock(TransactionCase):
         quant.inventory_quantity = 77.0
         quant.action_apply_inventory()
         self.assertEqual(self._qty(self.screw, self.shelf), 77.0)
+
+    # ------------------------------------------------------------------
+    # El bloqueo y el teórico son del momento en que se inicia el conteo
+    # ------------------------------------------------------------------
+    def test_confirmed_count_does_not_lock(self):
+        count = self._create_count()
+        count.action_confirm()
+        self.assertEqual(count.state, "ready")
+        self.assertFalse(count.line_ids.quant_id.filtered("count_line_id"))
+        picking = self._delivery(self.screw, 5.0)
+        picking.button_validate()
+        self.assertEqual(picking.state, "done", "confirmado todavía no bloquea")
+        count.action_start()
+        self.assertTrue(count.date_start)
+        blocked = self._delivery(self.screw, 5.0)
+        with self.assertRaises(UserError):
+            blocked.button_validate()
+
+    def test_start_takes_the_stock_of_that_moment(self):
+        tape = self.env["product.product"].create(
+            {"name": "Cinta 50 mm", "type": "consu", "is_storable": True}
+        )
+        count = self._create_count()
+        count.action_confirm()
+        self.assertEqual(len(count.line_ids), 4)
+        self._delivery(self.screw, 30.0).button_validate()
+        self.env["stock.quant"]._update_available_quantity(tape, self.shelf, 8.0)
+        count.action_start()
+        screw = count.line_ids.filtered(lambda line: line.product_id == self.screw)
+        self.assertEqual(screw.qty_theoretical, 70.0, "el teórico es el del inicio")
+        new = count.line_ids.filtered(lambda line: line.product_id == tape)
+        self.assertEqual(len(new), 1, "el stock que apareció después se agrega")
+        self.assertEqual(new.qty_theoretical, 8.0)
+        self.assertEqual(new.quant_id.count_line_id, new)
+        self.assertEqual(len(count.line_ids), 5)
+
+    def test_start_drops_pending_lines_without_stock(self):
+        count = self._create_count()
+        count.action_confirm()
+        quant = self.env["stock.quant"]._gather(self.roller, self.shelf, strict=True)
+        quant.sudo().unlink()
+        count.action_start()
+        self.assertFalse(count.line_ids.filtered(lambda line: line.product_id == self.roller))
+        self.assertEqual(len(count.line_ids), 3)
+
+    def test_first_quantity_starts_the_count_with_fresh_theoretical(self):
+        count = self._create_count(scope="products", product_ids=[(6, 0, self.screw.ids)])
+        count.action_confirm()
+        self._delivery(self.screw, 10.0).button_validate()
+        line = count.line_ids
+        self.assertEqual(line.qty_theoretical, 100.0)
+        line.write({"qty_counted": 90.0})
+        self.assertEqual(line.qty_theoretical, 90.0, "cargar la primera cantidad inicia el conteo")
+        self.assertEqual(line.qty_diff, 0.0)
+        self.assertEqual(count.state, "done")
+        self.assertEqual(self._qty(self.screw, self.shelf), 90.0)

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="mail_activity_count_review" model="mail.activity.type">
+        <field name="name">Aprobar recuento</field>
+        <field name="summary">Recuento para aprobar</field>
+        <field name="icon">fa-check-square-o</field>
+        <field name="res_model">stock.count</field>
+        <field name="delay_count">0</field>
+        <field name="sequence">60</field>
+    </record>
+    <record id="mail_activity_count_recount" model="mail.activity.type">
+        <field name="name">Segundo conteo</field>
+        <field name="summary">Segundo conteo pedido</field>
+        <field name="icon">fa-repeat</field>
+        <field name="res_model">stock.count</field>
+        <field name="delay_count">0</field>
+        <field name="sequence">61</field>
+    </record>
+</odoo>

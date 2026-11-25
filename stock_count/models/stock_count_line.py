@@ -326,11 +326,12 @@ class StockCountLine(models.Model):
 
     @api.model
     def _get_active_lock_lines(self, products, locations, companies=None):
-        """Líneas de recuentos activos con bloqueo (block o warn) sobre estos productos y
-        ubicaciones. Una sola consulta; product_id, location_id y count_state están
-        indexados para que validar un picking grande no cueste."""
+        """Líneas de recuentos iniciados (en conteo o en revisión) con bloqueo (block o
+        warn) sobre estos productos y ubicaciones. Un recuento confirmado todavía no
+        bloquea. Una sola consulta; product_id, location_id y count_state están indexados
+        para que validar un picking grande no cueste."""
         domain = [
-            ("count_state", "in", ("ready", "counting", "review")),
+            ("count_state", "in", ("counting", "review")),
             ("state", "not in", ("applied", "skipped")),
             ("count_id.lock_mode", "!=", "none"),
             ("product_id", "in", products.ids),
@@ -408,6 +409,11 @@ class StockCountLine(models.Model):
             self._check_can_count()
         if counting:
             self._check_serial_quantity(vals)
+            # Contar la primera línea de un recuento confirmado lo inicia: recién ahí se
+            # toma el teórico y empieza el bloqueo.
+            ready = self.count_id.filtered(lambda count: count.state == "ready")
+            if ready:
+                ready.sudo().with_context(stock_count_keep_line_ids=self.ids).action_start()
         res = super().write(vals)
         # Cantidad base cargada directo (escritorio, cierre en cero): se reparte en
         # embalajes enteros y sueltas para que la app y los reportes la muestren igual.
@@ -444,13 +450,24 @@ class StockCountLine(models.Model):
                     )
                 )
                 super(StockCountLine, auto).write({"state": "approved"})
-            # Contar la primera línea de un recuento confirmado lo pone en conteo.
-            self.count_id.filtered(lambda count: count.state == "ready").sudo().action_start()
             # Cuando se carga la última línea, el recuento pasa solo a revisión.
             self.count_id._auto_review()
             # Un reconteo que dejó todo aprobado valida el recuento.
             self.count_id._try_auto_validate()
+            self.count_id.filtered(
+                lambda count: count.state in ("review", "done")
+            )._sync_review_activities()
         return res
+
+    def _set_snapshot(self, quant_id, quantity):
+        """Actualiza el teórico de la línea. Devuelve 1 si la cantidad cambió."""
+        self.ensure_one()
+        changed = bool(
+            float_compare(self.qty_theoretical, quantity, precision_rounding=self._rounding())
+        )
+        if changed or self.quant_id.id != quant_id:
+            super(StockCountLine, self).write({"quant_id": quant_id, "qty_theoretical": quantity})
+        return int(changed)
 
     def _immediate_recount(self):
         """Reconteo inmediato: el primer conteo que supera el umbral vuelve a contarse en
@@ -791,12 +808,16 @@ class StockCountLine(models.Model):
         self.ensure_one()
         packs_f, loose_f, qty_f = PACK_FIELDS[self._count_stage()]
         was_recount = self.state == "recount"
+        was_ready = self.count_state == "ready"
         if packs is not None or loose is not None:
             self.write({packs_f: packs or 0.0, loose_f: loose or 0.0})
         else:
             self.write({qty_f: quantity or 0.0})
         data = self.sudo()._counter_line_data()
         data["recount_requested"] = self.state == "recount" and not was_recount
+        # El conteo recién se inició: el teórico se actualizó y las líneas pueden haber
+        # cambiado, así que la app vuelve a traer el recuento.
+        data["count_started"] = was_ready
         return data
 
     def counter_set_pack(self, pack_id=False):
@@ -944,6 +965,7 @@ class StockCountLine(models.Model):
                 )
         self.write({"state": "approved"})
         self.count_id._try_auto_validate()
+        self.count_id._sync_review_activities()
         return True
 
     def action_accept_first_count(self):
@@ -966,6 +988,7 @@ class StockCountLine(models.Model):
         )
         self.count_id._auto_review()
         self.count_id._try_auto_validate()
+        self.count_id._sync_review_activities()
         return True
 
     def action_request_recount(self):
@@ -993,6 +1016,7 @@ class StockCountLine(models.Model):
                 "moved_during_count": False,
             }
         )
+        self.count_id._sync_review_activities()
         return True
 
     def action_skip(self):
@@ -1002,6 +1026,7 @@ class StockCountLine(models.Model):
         self.write({"state": "skipped"})
         self.count_id._auto_review()
         self.count_id._try_auto_validate()
+        self.count_id._sync_review_activities()
         return True
 
     def action_reset_pending(self):

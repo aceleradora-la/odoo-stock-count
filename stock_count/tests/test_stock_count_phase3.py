@@ -177,6 +177,7 @@ class TestStockCountPhase3(Phase3Common, TransactionCase):
         self.company.stock_count_blind = True
         count = self._create_count(scope="products", product_ids=[(6, 0, self.screw.ids)])
         count.action_confirm()
+        count.action_start()
         Quant = self.env["stock.quant"].with_user(self.counter)
         domain = [("product_id", "=", self.screw.id), ("location_id", "=", self.shelf.id)]
         self.assertFalse(Quant.search(domain), "el quant tomado por un recuento ciego no se ve")

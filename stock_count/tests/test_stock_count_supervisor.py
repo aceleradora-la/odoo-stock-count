@@ -224,3 +224,53 @@ class TestStockCountSupervisor(Phase3Common, TransactionCase):
         self.assertEqual(result["validated"], count.name)
         self.assertEqual(count.state, "done")
         self.assertEqual(self._qty(self.screw, self.shelf), 80.0)
+
+    # ------------------------------------------------------------------
+    # Precisión y avisos
+    # ------------------------------------------------------------------
+    def _loose_count(self):
+        """Aprueba solo hasta 2 %; recuenta recién sobre 50 %."""
+        count = self._count(
+            auto_approve_tolerance_pct=2.0, recount_threshold_qty=0.0, recount_threshold_pct=50.0
+        )
+        self._line(count, self.screw).write({"qty_counted": 99.0})  # −1 %
+        self._line(count, self.roller).write({"qty_counted": 30.0})  # −25 %
+        self._line(count, self.paint, self.lot_a).write({"qty_counted": 36.0})
+        return count
+
+    def _activities(self, count, xmlid):
+        activity_type = self.env.ref(xmlid)
+        return count.activity_ids.filtered(lambda act: act.activity_type_id == activity_type)
+
+    def test_accuracy_counts_lines_within_tolerance(self):
+        count = self._loose_count()
+        self.assertEqual(count.state, "review")
+        self.assertEqual(count.diff_count, 2)
+        self.assertAlmostEqual(count.accuracy, 100.0 * 2 / 3, places=2)
+
+    def test_supervisor_gets_an_activity_while_there_is_something_to_approve(self):
+        count = self._loose_count()
+        review = "stock_count.mail_activity_count_review"
+        activities = self._activities(count, review)
+        self.assertEqual(len(activities), 1)
+        self.assertEqual(activities.user_id, self.supervisor)
+        self._line(count, self.roller).with_user(self.supervisor).action_approve()
+        self.assertEqual(count.state, "done")
+        self.assertFalse(self._activities(count, review), "validado: el aviso se cierra")
+
+    def test_counter_gets_an_activity_for_the_second_count(self):
+        count = self._count()
+        count.line_ids.write({"assigned_user_id": self.counter.id})
+        screw = self._line(count, self.screw)
+        self._as_counter(screw).counter_set_quantity(80.0)
+        self._as_counter(self._line(count, self.roller)).counter_set_quantity(40.0)
+        self._as_counter(self._line(count, self.paint, self.lot_a)).counter_set_quantity(36.0)
+        self.assertEqual(count.state, "review")
+        self.assertEqual(screw.state, "recount")
+        recount = "stock_count.mail_activity_count_recount"
+        activities = self._activities(count, recount)
+        self.assertEqual(activities.user_id, self.counter)
+        self.assertFalse(self._activities(count, "stock_count.mail_activity_count_review"))
+        self._as_counter(screw).counter_set_quantity(100.0)
+        self.assertEqual(count.state, "done")
+        self.assertFalse(self._activities(count, recount))
