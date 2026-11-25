@@ -96,6 +96,29 @@ unidad base: diferencias, tolerancias, bloqueo y ajustes no cambian.
 - **Reportes.** Hoja de conteo, informe de diferencias, Excel y listas muestran el
   desglose. El desglose del teórico queda oculto en conteo ciego.
 
+### App Recuentos: sin conexión, buscador, reconteo inmediato y supervisor
+
+- **Sin conexión.** Cada cantidad se guarda primero en el teléfono (IndexedDB), se ve
+  aplicada en pantalla y viaja al servidor en orden cuando hay señal. Una franja avisa
+  cuántas cantidades faltan enviar y cada renglón pendiente lleva la marca *sin enviar*.
+  La última copia de los recuentos queda guardada: se puede entrar a una zona sin wifi y
+  seguir contando, incluso si la app se recarga. Lo que necesita al servidor (terminar,
+  producto no esperado, cambiar la unidad, supervisar) espera a que la cola se vacíe.
+  Límite: hay que abrir la app con señal al menos una vez antes de entrar al depósito.
+- **Buscador.** En ubicaciones con más de seis productos aparece un buscador por nombre,
+  código, código de barras, lote o paquete, y el filtro *Pendientes*.
+- **Lector físico.** Si el lector escribe el código dentro de un casillero de cantidad o
+  del buscador, la app lo reconoce como escaneo (ráfaga de teclas + Enter o Tab) y no lo
+  guarda como cantidad.
+- **Reconteo inmediato** (Ajustes de Inventario, apagado por defecto; se puede cambiar en
+  cada recuento). Si el primer conteo supera el umbral de reconteo, la app pide contar de
+  nuevo en el momento, sin decir cuánto espera el sistema. Evita la segunda vuelta al
+  depósito. Lo contado sumando de a uno (escaneo, +1) se evalúa al terminar la ubicación.
+- **Supervisar.** Tarjeta visible solo para supervisores: recuentos en curso, avance por
+  contador, líneas para resolver ordenadas por valor (sistema, contado, diferencia, quién
+  contó) con *Aprobar*, *Recontar* y *Aceptar 1er conteo*, aprobación en bloque y
+  *Validar*. Usa `stock.count.supervisor_get_data` y `supervisor_action`.
+
 ### Reglas de seguridad de la carga
 
 - Un producto escaneado se cuenta solo en la ubicación abierta. Si ahí no se lo esperaba,

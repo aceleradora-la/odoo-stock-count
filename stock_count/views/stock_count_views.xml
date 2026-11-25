@@ -59,6 +59,7 @@
                             <field name="recount_threshold_qty" readonly="state in ('done', 'cancel')"/>
                             <field name="auto_approve_tolerance_pct" readonly="state in ('done', 'cancel')"/>
                             <field name="recount_min_value" readonly="state in ('done', 'cancel')"/>
+                            <field name="immediate_recount" readonly="state in ('done', 'cancel')"/>
                         </group>
                     </group>
                     <group name="stats" invisible="state == 'draft'">

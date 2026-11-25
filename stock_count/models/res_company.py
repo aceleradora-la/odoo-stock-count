@@ -39,6 +39,13 @@ class ResCompany(models.Model):
         default=1.0,
         digits=(16, 2),
     )
+    stock_count_immediate_recount = fields.Boolean(
+        string="Reconteo inmediato",
+        default=False,
+        help="Si el primer conteo supera el umbral de reconteo, se pide el segundo conteo "
+        "en el momento, sin esperar a la revisión. El contador solo ve que tiene que "
+        "contar de nuevo, nunca la cantidad del sistema.",
+    )
     stock_count_recount_min_value = fields.Float(
         string="No recontar si el valor de la diferencia es menor a",
         default=0.0,

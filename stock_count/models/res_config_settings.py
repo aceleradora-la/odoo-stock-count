@@ -20,3 +20,6 @@ class ResConfigSettings(models.TransientModel):
     stock_count_recount_min_value = fields.Float(
         related="company_id.stock_count_recount_min_value", readonly=False
     )
+    stock_count_immediate_recount = fields.Boolean(
+        related="company_id.stock_count_immediate_recount", readonly=False
+    )

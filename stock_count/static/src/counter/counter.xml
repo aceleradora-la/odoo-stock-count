@@ -4,6 +4,16 @@
 <t t-name="stock_count.Counter">
     <div class="o_stock_count_counter">
 
+        <!-- Sin señal o con cantidades todavía en el teléfono -->
+        <button t-if="!state.online or state.queue.length" type="button"
+                t-attf-class="o_sc_net {{ state.online ? 'o_sc_net_sync' : 'o_sc_net_off' }}" t-on-click="() => this.flush()">
+            <t t-if="!state.online"><i class="fa fa-exclamation-triangle me-1"/> Sin conexión.</t>
+            <t t-else=""><i class="fa fa-circle-o-notch fa-spin me-1"/> Enviando…</t>
+            <t t-if="state.queue.length"> <strong t-out="state.queue.length"/> cantidades guardadas en el teléfono, sin enviar.</t>
+            <t t-else=""> Lo que cargues queda guardado en el teléfono.</t>
+            <t t-if="!state.online"> Tocá para reintentar.</t>
+        </button>
+
         <!-- Inicio de la app -->
         <t t-if="state.screen === 'home'">
             <div class="o_sc_header o_sc_header_home">
@@ -20,6 +30,14 @@
                     <div class="flex-grow-1">
                         <div class="o_sc_home_title">Contar</div>
                         <div class="o_sc_muted" t-out="pendingLabel"/>
+                    </div>
+                    <i class="fa fa-chevron-right o_sc_home_chevron" aria-hidden="true"/>
+                </button>
+                <button t-if="state.isManager" type="button" class="o_sc_home_card" t-on-click="openSupervision" t-att-disabled="state.busy">
+                    <div class="o_sc_home_icon" aria-hidden="true"><i class="fa fa-check-square-o"/></div>
+                    <div class="flex-grow-1">
+                        <div class="o_sc_home_title">Supervisar</div>
+                        <div class="o_sc_muted">Avance por contador, diferencias para aprobar y validación</div>
                     </div>
                     <i class="fa fa-chevron-right o_sc_home_chevron" aria-hidden="true"/>
                 </button>
@@ -46,7 +64,8 @@
             <div class="o_sc_body">
                 <div t-if="state.loading" class="o_sc_empty"><i class="fa fa-circle-o-notch fa-spin me-1"/> Cargando…</div>
                 <div t-elif="!state.counts.length" class="o_sc_empty">
-                    No hay recuentos para contar. Cuando el supervisor confirme uno donde sos contador, aparece acá.
+                    <t t-if="state.online">No hay recuentos para contar. Cuando el supervisor confirme uno donde sos contador, aparece acá.</t>
+                    <t t-else="">Sin conexión y sin recuentos guardados en el teléfono. Abrí la app con señal antes de entrar al depósito.</t>
                 </div>
                 <t t-foreach="state.counts" t-as="rec" t-key="rec.id">
                     <t t-set="sum" t-value="summary(rec)"/>
@@ -148,7 +167,22 @@
                 </div>
             </div>
             <div class="o_sc_body o_sc_location">
-                <t t-foreach="currentLines" t-as="line" t-key="line.id">
+                <div t-if="currentLines.length > 6 or state.filter or state.onlyPending" class="o_sc_tools">
+                    <div class="o_sc_search">
+                        <i class="fa fa-search" aria-hidden="true"/>
+                        <input type="text" class="o_sc_input" placeholder="Buscar producto, código o lote" aria-label="Buscar en esta ubicación"
+                               t-model="state.filter" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+                               t-on-focus="onFieldFocus" t-on-input="onTyping" t-on-keydown="onSearchKeydown"/>
+                        <button t-if="state.filter" type="button" class="o_sc_clear" aria-label="Borrar la búsqueda" t-on-click="clearFilter"><i class="fa fa-times"/></button>
+                    </div>
+                    <button type="button" t-attf-class="o_sc_chip {{ state.onlyPending ? 'o_sc_chip_on' : '' }}"
+                            t-att-aria-pressed="state.onlyPending ? 'true' : 'false'" t-on-click="togglePending">Pendientes</button>
+                </div>
+                <div t-if="!visibleLines.length" class="o_sc_empty">
+                    <t t-if="state.filter">Ningún producto de esta ubicación coincide con «<t t-out="state.filter"/>». Si lo tenés en la mano, agregalo con el botón Producto.</t>
+                    <t t-else="">No quedan productos pendientes en esta ubicación.</t>
+                </div>
+                <t t-foreach="visibleLines" t-as="line" t-key="line.id">
                     <div t-attf-class="o_sc_line {{ line.done ? '' : 'o_sc_line_empty' }} {{ line.is_recount ? 'o_sc_line_recount' : '' }} {{ line.pack ? 'o_sc_line_pack' : '' }}"
                          t-att-data-line-id="line.id" t-on-focusout="(ev) => this.onRowFocusOut(line, ev)">
                         <div class="o_sc_line_info">
@@ -159,6 +193,7 @@
                                 <span t-if="line.package_name" class="o_sc_tag">Paquete <t t-out="line.package_name"/></span>
                                 <span t-if="line.owner_name" class="o_sc_tag">De <t t-out="line.owner_name"/></span>
                                 <span t-if="line.is_recount" class="o_sc_tag o_sc_tag_warn">2° conteo</span>
+                                <span t-if="isUnsent(line)" class="o_sc_tag o_sc_tag_unsent"><i class="fa fa-clock-o"/> sin enviar</span>
                             </div>
                             <select t-if="line.pack_options and line.pack_options.length > 1" class="o_sc_unit" aria-label="Unidad de recuento"
                                     t-on-change="(ev) => this.changeUnit(line, ev)">
@@ -172,14 +207,14 @@
                                 <div class="o_sc_field">
                                     <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="packs" placeholder="—"
                                            t-att-aria-label="line.pack.name" t-att-value="cell(line, 'packs')"
-                                           t-on-focus="selectOnFocus" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
+                                           t-on-focus="onFieldFocus" t-on-input="onTyping" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
                                     <span class="o_sc_uom" t-out="line.pack.name"/>
                                 </div>
                                 <span class="o_sc_plus_sign">+</span>
                                 <div class="o_sc_field">
                                     <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="loose" placeholder="—"
                                            t-att-aria-label="line.uom_name" t-att-value="cell(line, 'loose')"
-                                           t-on-focus="selectOnFocus" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
+                                           t-on-focus="onFieldFocus" t-on-input="onTyping" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
                                     <span class="o_sc_uom" t-out="line.uom_name"/>
                                 </div>
                             </t>
@@ -187,7 +222,7 @@
                                 <div class="o_sc_field">
                                     <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="qty" placeholder="—"
                                            t-att-aria-label="line.product_name" t-att-value="cell(line, 'qty')"
-                                           t-on-focus="selectOnFocus" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
+                                           t-on-focus="onFieldFocus" t-on-input="onTyping" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
                                     <span class="o_sc_uom" t-out="line.uom_name"/>
                                 </div>
                             </t>
@@ -204,7 +239,134 @@
                 <div class="o_sc_hint">
                     Enter pasa al casillero siguiente. Escanear un producto suma 1; el código de un embalaje suma un embalaje. Terminar registra en 0 lo que quede sin cantidad.
                 </div>
-                <div t-if="state.saving" class="o_sc_saving"><i class="fa fa-circle-o-notch fa-spin me-1"/> Guardando…</div>
+            </div>
+        </t>
+
+        <!-- Supervisor: recuentos en curso -->
+        <t t-if="state.screen === 'super'">
+            <div class="o_sc_header">
+                <button type="button" class="o_sc_back" aria-label="Volver al inicio" t-on-click="goHome">
+                    <i class="fa fa-chevron-left"/>
+                </button>
+                <div class="flex-grow-1">
+                    <div class="o_sc_title">Supervisar</div>
+                    <div class="o_sc_sub">Recuentos en curso</div>
+                </div>
+                <button type="button" class="o_sc_back" aria-label="Actualizar" t-on-click="refreshSupervision" t-att-disabled="state.busy">
+                    <i t-attf-class="fa fa-refresh {{ state.busy ? 'fa-spin' : '' }}"/>
+                </button>
+            </div>
+            <div class="o_sc_body">
+                <div t-if="!state.supervision.length" class="o_sc_empty">No hay recuentos en curso.</div>
+                <t t-foreach="state.supervision" t-as="rec" t-key="rec.id">
+                    <button type="button" t-attf-class="o_sc_card o_sc_card_button {{ rec.approve_count or rec.can_validate ? 'o_sc_card_active' : '' }}" t-on-click="() => this.openSuperCount(rec.id)">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="o_sc_card_title" t-out="rec.name"/>
+                                <div class="o_sc_muted" t-out="rec.locations"/>
+                            </div>
+                            <span t-attf-class="o_sc_badge {{ rec.state === 'review' ? 'o_sc_badge_warn' : 'o_sc_badge_draft' }}" t-out="rec.state_label"/>
+                        </div>
+                        <div class="d-flex justify-content-between o_sc_muted">
+                            <span><t t-out="rec.counted_count"/> de <t t-out="rec.line_count"/> contadas</span>
+                            <span><t t-out="rec.progress"/> %</span>
+                        </div>
+                        <div class="o_sc_progress"><div t-attf-style="width: {{ rec.progress }}%"/></div>
+                        <div class="o_sc_stats">
+                            <span t-if="rec.approve_count" class="o_sc_alert"><t t-out="rec.approve_count"/> para aprobar</span>
+                            <span t-if="rec.recount_count" class="o_sc_alert"><t t-out="rec.recount_count"/> en reconteo</span>
+                            <span t-if="rec.can_validate" class="o_sc_ok">Listo para validar</span>
+                            <span t-if="rec.diff_count" class="o_sc_muted"><t t-out="rec.diff_count"/> con diferencia · <t t-out="rec.diff_value_label"/></span>
+                        </div>
+                    </button>
+                </t>
+            </div>
+        </t>
+
+        <!-- Supervisor: un recuento -->
+        <t t-if="state.screen === 'super_count' and superCount">
+            <t t-set="rec" t-value="superCount"/>
+            <div class="o_sc_header">
+                <button type="button" class="o_sc_back" aria-label="Volver a los recuentos" t-on-click="backToSupervision">
+                    <i class="fa fa-chevron-left"/>
+                </button>
+                <div class="flex-grow-1">
+                    <div class="o_sc_title" t-out="rec.name"/>
+                    <div class="o_sc_sub"><t t-out="rec.state_label"/> · <t t-out="rec.counted_count"/> de <t t-out="rec.line_count"/> contadas</div>
+                </div>
+                <button type="button" class="o_sc_back" aria-label="Actualizar" t-on-click="refreshSupervision" t-att-disabled="state.busy">
+                    <i t-attf-class="fa fa-refresh {{ state.busy ? 'fa-spin' : '' }}"/>
+                </button>
+            </div>
+            <div class="o_sc_body">
+                <div class="o_sc_progress"><div t-attf-style="width: {{ rec.progress }}%"/></div>
+                <div class="o_sc_stats">
+                    <span class="o_sc_muted"><t t-out="rec.pending_count"/> sin contar</span>
+                    <span t-if="rec.recount_count" class="o_sc_alert"><t t-out="rec.recount_count"/> en reconteo</span>
+                    <span t-if="rec.diff_count" class="o_sc_muted"><t t-out="rec.diff_count"/> con diferencia · <t t-out="rec.diff_value_label"/></span>
+                    <span t-if="rec.moved_count" class="o_sc_alert"><t t-out="rec.moved_count"/> movidas durante el conteo</span>
+                </div>
+
+                <div class="o_sc_section_title">Contadores</div>
+                <div class="o_sc_card o_sc_counters">
+                    <t t-foreach="rec.counters" t-as="counter" t-key="counter_index">
+                        <div class="o_sc_counter_row">
+                            <div class="d-flex justify-content-between">
+                                <span class="o_sc_counter_name" t-out="counter.name"/>
+                                <span class="o_sc_muted"><t t-out="counter.done"/> de <t t-out="counter.total"/></span>
+                            </div>
+                            <div class="o_sc_progress"><div t-attf-style="width: {{ counterProgress(counter) }}%"/></div>
+                        </div>
+                    </t>
+                </div>
+
+                <div class="o_sc_section_title">Para resolver<t t-if="rec.lines.length"> (<t t-out="rec.lines.length + rec.more_lines"/>)</t></div>
+                <div t-if="!rec.lines.length" class="o_sc_empty">
+                    <t t-if="rec.can_validate">Todo aprobado. Falta validar para generar los ajustes.</t>
+                    <t t-elif="rec.pending_count">Nada para resolver todavía: los contadores siguen contando.</t>
+                    <t t-else="">Nada para resolver.</t>
+                </div>
+                <t t-foreach="rec.lines" t-as="line" t-key="line.id">
+                    <div t-attf-class="o_sc_sline {{ line.state === 'recount' ? 'o_sc_line_recount' : '' }}">
+                        <div class="o_sc_line_label" t-out="line.product"/>
+                        <div class="o_sc_line_meta">
+                            <span t-out="line.location"/>
+                            <span t-if="line.lot" class="o_sc_tag">Lote <t t-out="line.lot"/></span>
+                            <span t-if="line.state === 'recount'" class="o_sc_tag o_sc_tag_warn">Esperando 2° conteo</span>
+                            <span t-elif="line.has_recount" class="o_sc_tag">Recontada</span>
+                            <span t-if="line.zero_filled" class="o_sc_tag o_sc_tag_warn">Cerrada en 0 sin contar</span>
+                            <span t-if="line.moved" class="o_sc_tag o_sc_tag_warn">Stock movido</span>
+                        </div>
+                        <div class="o_sc_figures">
+                            <div><span class="o_sc_muted">Sistema</span><strong><t t-out="qty(line.theoretical)"/></strong></div>
+                            <div><span class="o_sc_muted"><t t-if="line.state === 'recount'">1er conteo</t><t t-else="">Contado</t></span><strong><t t-out="qty(line.state === 'recount' ? line.first_count : line.counted)"/></strong></div>
+                            <div><span class="o_sc_muted">Diferencia</span><strong t-attf-class="{{ line.diff &lt; 0 ? 'o_sc_neg' : 'o_sc_pos' }}" t-out="diffLabel(line)"/></div>
+                            <div><span class="o_sc_muted">Valor</span><strong t-attf-class="{{ line.value &lt; 0 ? 'o_sc_neg' : 'o_sc_pos' }}" t-out="line.value_label"/></div>
+                        </div>
+                        <div class="o_sc_muted">
+                            <t t-out="line.uom"/><t t-if="line.breakdown"> · contado <t t-out="line.breakdown"/></t><t t-if="line.counted_by"> · contó <t t-out="line.counted_by"/></t>
+                        </div>
+                        <div class="o_sc_btn_row">
+                            <t t-if="line.state === 'counted'">
+                                <button type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('recount', [line.id])"><i class="fa fa-refresh me-1"/> Recontar</button>
+                                <button type="button" class="o_sc_btn o_sc_btn_primary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('approve', [line.id])"><i class="fa fa-check me-1"/> Aprobar</button>
+                            </t>
+                            <button t-else="" type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('accept_first', [line.id])">Aceptar 1er conteo</button>
+                        </div>
+                    </div>
+                </t>
+                <div t-if="rec.more_lines" class="o_sc_hint">Hay <t t-out="rec.more_lines"/> líneas más. Se muestran primero las de mayor valor; el resto aparece a medida que resolvés estas.</div>
+            </div>
+            <div t-if="rec.approve_count or (rec.state === 'review' and rec.recount_count) or rec.can_validate" class="o_sc_footer">
+                <button t-if="rec.can_validate" type="button" class="o_sc_btn o_sc_btn_primary" t-att-disabled="state.busy" t-on-click="validateCount">
+                    <i class="fa fa-check me-1"/> <t t-if="rec.moved_count">Validar igualmente</t><t t-else="">Validar</t>
+                </button>
+                <button t-if="rec.approve_count" type="button" class="o_sc_btn o_sc_btn_primary" t-att-disabled="state.busy" t-on-click="approveAll">
+                    Aprobar todas las contadas (<t t-out="rec.approve_count"/>)
+                </button>
+                <button t-if="rec.state === 'review' and rec.recount_count" type="button" class="o_sc_btn o_sc_btn_secondary" t-att-disabled="state.busy" t-on-click="acceptAllFirst">
+                    Aceptar 1er conteo de las <t t-out="rec.recount_count"/> en reconteo
+                </button>
             </div>
         </t>
 
