@@ -1,7 +1,6 @@
 {
     "name": "Recuento de inventario: conteo cíclico",
-    "summary": "Reglas que crean recuentos automáticamente (periódicas, por rotación de "
-    "valor, por precisión mínima y confirmación de cero) y asignan la tarea al responsable",
+    "summary": "Reglas que crean recuentos automáticamente y asignan la tarea al responsable",
     "version": "19.0.1.0.0",
     "category": "Inventory/Inventory",
     "author": "aceleradora.la",
@@ -14,6 +13,7 @@
         "views/stock_count_rule_views.xml",
         "views/stock_count_views.xml",
     ],
+    "images": ["static/description/banner.png"],
     "installable": True,
     "application": False,
     "auto_install": False,

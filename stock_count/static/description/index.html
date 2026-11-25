@@ -1,0 +1,198 @@
+<section class="oe_container" style="padding:32px 0 8px;">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-2 text-center">
+        <img src="icon.png" alt="Recuento de inventario" style="width:112px; height:112px;"/>
+      </div>
+      <div class="col-md-10">
+        <h1 style="color:#0f6e63; font-weight:700; margin:0;">Recuento de inventario</h1>
+        <h4 style="color:#374151; font-weight:400; margin:6px 0 10px;">Recuentos físicos con conteo desde el celular, reconteo, aprobación y ajuste de inventario</h4>
+        <p style="margin:0; color:#1f2937; line-height:1.5;">Cada recuento es un documento con número, supervisor y contadores. Se cuenta desde la app Recuentos o desde el escritorio, las diferencias se recuentan y se aprueban, y el recuento genera los ajustes de inventario. Funciona en Odoo Community y Enterprise.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="oe_container" style="padding:24px 0 8px;">
+  <div class="container">
+    <h2 style="color:#0f6e63; font-weight:700; margin:0 0 16px;">Cómo funciona</h2>
+    <div class="row">
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <div style="display:inline-block; width:30px; height:30px; line-height:30px; border-radius:15px; background:#0f6e63; color:#fff; font-weight:700; text-align:center; margin-bottom:8px;">1</div>
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Crear</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Se eligen depósito, ubicaciones, productos (todos, una lista, una categoría o lotes), supervisor, contadores y modo de bloqueo.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <div style="display:inline-block; width:30px; height:30px; line-height:30px; border-radius:15px; background:#0f6e63; color:#fff; font-weight:700; text-align:center; margin-bottom:8px;">2</div>
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Confirmar</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">El recuento genera una línea por producto, ubicación, lote, paquete y propietario, con la cantidad del sistema de ese momento.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <div style="display:inline-block; width:30px; height:30px; line-height:30px; border-radius:15px; background:#0f6e63; color:#fff; font-weight:700; text-align:center; margin-bottom:8px;">3</div>
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Contar</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Cada contador carga sus cantidades en la app, escribiendo o escaneando, ubicación por ubicación.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <div style="display:inline-block; width:30px; height:30px; line-height:30px; border-radius:15px; background:#0f6e63; color:#fff; font-weight:700; text-align:center; margin-bottom:8px;">4</div>
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Recontar</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Las líneas cuya diferencia supera el umbral vuelven al contador para un segundo conteo.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <div style="display:inline-block; width:30px; height:30px; line-height:30px; border-radius:15px; background:#0f6e63; color:#fff; font-weight:700; text-align:center; margin-bottom:8px;">5</div>
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Revisar</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">El supervisor aprueba, pide otro conteo, acepta el primer conteo u omite cada línea. Lo que está dentro de la tolerancia se aprueba solo.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <div style="display:inline-block; width:30px; height:30px; line-height:30px; border-radius:15px; background:#0f6e63; color:#fff; font-weight:700; text-align:center; margin-bottom:8px;">6</div>
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Validar</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Con todo resuelto, el recuento se valida y genera los ajustes de inventario, enlazados al recuento.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="oe_container" style="padding:24px 0 8px;">
+  <div class="container">
+    <h2 style="color:#0f6e63; font-weight:700; margin:0 0 16px;">App Recuentos</h2>
+    <div class="row">
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Contar por ubicación</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Recuentos del contador, tarjetas por ubicación con su avance y renglones donde solo se escribe la cantidad. Enter pasa al siguiente.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Escaneo</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Lector físico, cámara del celular o código escrito. Una ubicación se abre al escanearla; un producto suma una unidad; un embalaje suma un embalaje. Lee códigos GS1 con lote y cantidad.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Embalajes y sueltas</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Los productos con unidad de recuento (caja, pack) se cargan en dos casilleros. El contador puede cambiar la unidad de cada renglón.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Producto no esperado</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Lo que aparece donde el sistema no lo tenía se agrega al recuento desde la app.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Sin conexión</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Las cantidades se guardan en el teléfono y se envían cuando vuelve la señal.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Supervisar</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Avance por contador, líneas para resolver ordenadas por valor, aprobar, pedir reconteo y validar desde el celular.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Buscador</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Búsqueda por nombre, código, lote o paquete y filtro de pendientes dentro de la ubicación.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Instalable</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Se instala en el celular con su ícono y abre directo en Recuentos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="oe_container" style="padding:24px 0 8px;">
+  <div class="container">
+    <h2 style="color:#0f6e63; font-weight:700; margin:0 0 16px;">Bloqueo de movimientos</h2>
+    <table style="width:100%; border-collapse:collapse; color:#1f2937;">
+      <thead><tr><th style="padding:8px 12px; text-align:left; background:#0f6e63; color:#fff;">Modo</th><th style="padding:8px 12px; text-align:left; background:#0f6e63; color:#fff;">Qué pasa al validar un movimiento de un producto en recuento</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:8px 12px; border-bottom:1px solid #d1e0dd; vertical-align:top;">Bloquear la validación</td><td style="padding:8px 12px; border-bottom:1px solid #d1e0dd; vertical-align:top;">Se rechaza, indicando producto, ubicación, recuento y supervisor. La reserva sigue permitida.</td></tr>
+        <tr><td style="padding:8px 12px; border-bottom:1px solid #d1e0dd; vertical-align:top;">Avisar y marcar la línea</td><td style="padding:8px 12px; border-bottom:1px solid #d1e0dd; vertical-align:top;">El movimiento pasa y la línea queda marcada como movida durante el conteo.</td></tr>
+        <tr><td style="padding:8px 12px; border-bottom:1px solid #d1e0dd; vertical-align:top;">Sin control</td><td style="padding:8px 12px; border-bottom:1px solid #d1e0dd; vertical-align:top;">El movimiento pasa. Al validar el recuento se detecta si el stock cambió.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<section class="oe_container" style="padding:24px 0 8px;">
+  <div class="container">
+    <h2 style="color:#0f6e63; font-weight:700; margin:0 0 16px;">Control y reportes</h2>
+    <div class="row">
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Conteo ciego</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Ajuste de la compañía: los contadores no ven la cantidad del sistema, la diferencia ni su valor en ninguna pantalla ni exportación.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Umbrales</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Reconteo por porcentaje o unidades, aprobación automática hasta un porcentaje y valor mínimo para recontar.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Reconteo inmediato</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Opcional: si el primer conteo supera el umbral, la app pide contar de nuevo en el momento.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Reparto de líneas</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Asignación a los contadores por ubicación, balanceando la carga, o línea por línea.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Motivos de diferencia</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Cada diferencia lleva su motivo. Un motivo puede enviar el faltante a una ubicación, como Desechos.</p>
+        </div>
+      </div>
+      <div class="col-md-4" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Reportes</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Hoja de conteo e informe de diferencias en PDF, exportación a Excel, análisis por ubicación, producto, motivo y contador, y precisión por ubicación.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="oe_container" style="padding:24px 0 8px;">
+  <div class="container">
+    <h2 style="color:#0f6e63; font-weight:700; margin:0 0 16px;">Módulos complementarios</h2>
+    <div class="row">
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">Conteo cíclico (stock_count_cycle)</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">Reglas que crean los recuentos automáticamente: periódicas, por rotación de valor, por precisión mínima y confirmación de cero.</p>
+        </div>
+      </div>
+      <div class="col-md-6" style="margin-bottom:16px;">
+        <div style="background:#f6faf9; border:1px solid #d1e0dd; border-radius:10px; padding:18px; height:100%;">
+          <h3 style="color:#0f6e63; font-size:17px; font-weight:700; margin:0 0 6px;">App Código de barras (stock_count_barcode)</h3>
+          <p style="margin:0; color:#1f2937; line-height:1.5;">En Odoo Enterprise, agrega la tarjeta Recuentos a la app Código de barras. Se instala solo.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="oe_container" style="padding:24px 0 32px;">
+  <div class="container">
+    <div style="border-top:2px solid #0f6e63; padding-top:14px; color:#374151; line-height:1.6;"><strong>Configuración:</strong> Inventario › Configuración › Ajustes › Recuento de inventario. Grupos Contador y Supervisor en la ficha del usuario.<br/><strong>Versiones:</strong> Odoo 18.0 y 19.0.<br/><strong>Licencia:</strong> AGPL-3.<br/><strong>Código y documentación:</strong> <a href="https://github.com/aceleradora-la/odoo-stock-count">https://github.com/aceleradora-la/odoo-stock-count</a><br/><strong>Autor:</strong> <a href="https://aceleradora.la">aceleradora.la</a></div>
+  </div>
+</section>
