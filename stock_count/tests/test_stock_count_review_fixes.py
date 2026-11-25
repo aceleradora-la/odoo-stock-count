@@ -57,6 +57,8 @@ class TestStockCountReviewFixes(Phase3Common, TransactionCase):
         count.with_user(self.supervisor).line_ids.filtered(
             lambda line: line.product_id == self.roller
         ).action_request_recount()
+        self.assertEqual(roller.state, "recount", "pedir reconteo no lo da por recontado")
+        self.assertFalse(roller.recounted_at)
         Line.browse(roller.id).counter_set_quantity(39.0)
         self.assertFalse(roller.zero_filled)
         self.assertEqual(roller.state, "approved", "contada a mano: vale la tolerancia")

@@ -714,7 +714,9 @@ class StockCountLine(models.Model):
                 )
             if line.count_state not in ("counting", "review"):
                 raise UserError(self.env._("El recuento no está en conteo ni en revisión."))
-        self.write(
+        # Con el write del ORM, sin pasar por el de esta clase: poner qty_recount en 0 no
+        # es "cargar un segundo conteo" y no debe marcar la línea como recontada.
+        super(StockCountLine, self).write(
             {
                 "state": "recount",
                 "qty_recount": 0.0,
