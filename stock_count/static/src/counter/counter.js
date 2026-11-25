@@ -212,31 +212,49 @@ export class StockCountCounter extends Component {
 
     /** Aplica en pantalla una cantidad guardada en el teléfono, como lo hará el servidor. */
     applyOp(line, op) {
-        const factor = line.pack ? line.pack.factor : 0;
+        const units = this.unitsOf(line).map((unit) => ({ ...unit }));
+        line.units = units;
+        const total = () =>
+            units.reduce((sum, unit) => sum + unit.qty * unit.factor, 0) + (line.loose || 0);
+        // Como el servidor: llena primero la unidad más grande.
         const split = (quantity) => {
-            const packs = factor > 0 ? Math.floor((quantity + 1e-9) / factor) : 0;
-            return [packs, Math.round((quantity - packs * factor) * 1000) / 1000];
+            let rest = quantity;
+            for (const unit of units) {
+                unit.qty = unit.factor > 0 ? Math.floor((rest + 1e-9) / unit.factor) : 0;
+                rest = Math.round((rest - unit.qty * unit.factor) * 1000) / 1000;
+            }
+            line.loose = rest;
         };
         if (op.kind === "set") {
-            if (op.values.packs !== undefined) {
-                line.packs = op.values.packs;
+            if (op.values.units !== undefined) {
+                for (const unit of units) {
+                    unit.qty = op.values.units[unit.id] || 0;
+                }
                 line.loose = op.values.loose;
-                line.quantity = line.packs * factor + line.loose;
+                line.quantity = total();
+            } else if (op.values.packs !== undefined) {
+                // Cantidad guardada por una versión anterior de la app: una sola unidad.
+                units.forEach((unit, index) => {
+                    unit.qty = index === 0 ? op.values.packs : 0;
+                });
+                line.loose = op.values.loose;
+                line.quantity = total();
             } else {
                 line.quantity = op.values.quantity;
-                if (line.pack) {
-                    [line.packs, line.loose] = split(line.quantity);
+                if (units.length) {
+                    split(line.quantity);
                 }
             }
         } else if (line.is_serial) {
             line.quantity = 1;
-        } else if (line.pack) {
-            if (op.packId && op.packId === line.pack.id && factor > 0) {
-                line.packs += Math.round(op.quantity / factor);
+        } else if (units.length) {
+            const unit = op.packId && units.find((u) => u.id === op.packId && u.factor > 0);
+            if (unit) {
+                unit.qty += Math.round(op.quantity / unit.factor);
             } else {
-                line.loose += op.quantity;
+                line.loose = (line.loose || 0) + op.quantity;
             }
-            line.quantity = line.packs * factor + line.loose;
+            line.quantity = total();
         } else {
             line.quantity = (line.quantity || 0) + op.quantity;
         }
@@ -334,7 +352,7 @@ export class StockCountCounter extends Component {
                         [[op.lineId], op.quantity],
                         kwargs
                     );
-                } else if (op.values.packs !== undefined) {
+                } else if (op.values.units !== undefined || op.values.packs !== undefined) {
                     updated = await this.orm.silent.call(
                         MODEL,
                         "counter_set_quantity",
@@ -631,7 +649,42 @@ export class StockCountCounter extends Component {
         if (!line.done) {
             return "";
         }
-        return formatQty(kind === "packs" ? line.packs : kind === "loose" ? line.loose : line.quantity);
+        if (kind.startsWith("unit:")) {
+            const unit = this.unitsOf(line).find((u) => String(u.id) === kind.slice(5));
+            return formatQty(unit ? unit.qty : 0);
+        }
+        return formatQty(kind === "loose" ? line.loose : line.quantity);
+    }
+
+    /**
+     * Unidades de recuento del renglón, de mayor a menor: un casillero cada una, más el
+     * de sueltas. Vacío si el renglón se cuenta en la unidad del producto.
+     */
+    unitsOf(line) {
+        if (line.units) {
+            return line.units;
+        }
+        // Datos guardados por una versión anterior de la app: una sola unidad.
+        return line.pack ? [{ ...line.pack, qty: line.packs || 0 }] : [];
+    }
+
+    /** Valor del selector "Contar en": false (unidad del producto), un embalaje o "all". */
+    unitMode(line) {
+        if (line.unit_mode !== undefined) {
+            return line.unit_mode;
+        }
+        return line.pack ? line.pack.id : false;
+    }
+
+    rowClass(line) {
+        const units = this.unitsOf(line).length;
+        return [
+            "o_sc_line",
+            line.done ? "" : "o_sc_line_empty",
+            line.is_recount ? "o_sc_line_recount" : "",
+            units ? "o_sc_line_pack" : "",
+            units > 1 ? "o_sc_line_multi" : "",
+        ].join(" ");
     }
 
     totalLabel(line) {
@@ -652,16 +705,21 @@ export class StockCountCounter extends Component {
             const input = row.querySelector(`input[data-kind="${kind}"]`);
             return input ? parseQty(input.value) : null;
         };
-        if (line.pack) {
-            const packs = read("packs");
+        const units = this.unitsOf(line);
+        if (units.length) {
             const loose = read("loose");
-            if (Number.isNaN(packs) || Number.isNaN(loose)) {
+            const typed = units.map((unit) => read(`unit:${unit.id}`));
+            if (Number.isNaN(loose) || typed.some((value) => Number.isNaN(value))) {
                 return false;
             }
-            if (packs === null && loose === null) {
+            if (loose === null && typed.every((value) => value === null)) {
                 return null;
             }
-            return { packs: packs || 0, loose: loose || 0 };
+            const values = {};
+            units.forEach((unit, index) => {
+                values[unit.id] = typed[index] || 0;
+            });
+            return { units: values, loose: loose || 0 };
         }
         const quantity = read("qty");
         if (Number.isNaN(quantity)) {
@@ -696,8 +754,9 @@ export class StockCountCounter extends Component {
             this.restoreRow(line);
             return;
         }
-        const same = line.pack
-            ? values.packs === line.packs && values.loose === line.loose
+        const same = values.units
+            ? values.loose === line.loose &&
+              this.unitsOf(line).every((unit) => values.units[unit.id] === unit.qty)
             : values.quantity === line.quantity;
         if (line.done && same) {
             return;
@@ -826,12 +885,15 @@ export class StockCountCounter extends Component {
         }
     }
 
-    /** Cambiar la unidad en la que se cuenta este renglón (unidad base o un embalaje). */
+    /**
+     * Cambiar en qué se cuenta este renglón: la unidad del producto, un embalaje o todas
+     * las unidades de recuento del producto.
+     */
     async changeUnit(line, ev) {
         const select = ev.target;
-        const packId = parseInt(select.value) || false;
+        const packId = select.value === "all" ? "all" : parseInt(select.value) || false;
         const revert = () => {
-            select.value = line.pack ? line.pack.id : "";
+            select.value = this.unitMode(line) || "";
         };
         await this.commitRow(line);
         if (!(await this.requireOnline())) {

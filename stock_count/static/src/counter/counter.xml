@@ -183,7 +183,7 @@
                     <t t-else="">No quedan productos pendientes en esta ubicación.</t>
                 </div>
                 <t t-foreach="visibleLines" t-as="line" t-key="line.id">
-                    <div t-attf-class="o_sc_line {{ line.done ? '' : 'o_sc_line_empty' }} {{ line.is_recount ? 'o_sc_line_recount' : '' }} {{ line.pack ? 'o_sc_line_pack' : '' }}"
+                    <div t-att-class="rowClass(line)"
                          t-att-data-line-id="line.id" t-on-focusout="(ev) => this.onRowFocusOut(line, ev)">
                         <div class="o_sc_line_info">
                             <div class="o_sc_line_label" t-out="line.product_name"/>
@@ -199,20 +199,22 @@
                                 <span>Contar en</span>
                                 <select class="o_sc_unit" t-on-change="(ev) => this.changeUnit(line, ev)">
                                     <t t-foreach="line.pack_options" t-as="option" t-key="option.id || 0">
-                                        <option t-att-value="option.id || ''" t-att-selected="(line.pack ? line.pack.id : false) === option.id" t-out="option.name"/>
+                                        <option t-att-value="option.id || ''" t-att-selected="unitMode(line) === option.id" t-out="option.name"/>
                                     </t>
                                 </select>
                             </label>
                         </div>
                         <div class="o_sc_line_inputs">
-                            <t t-if="line.pack">
-                                <div class="o_sc_field">
-                                    <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="packs" placeholder="—"
-                                           t-att-aria-label="line.pack.name" t-att-value="cell(line, 'packs')"
-                                           t-on-focus="onFieldFocus" t-on-input="onTyping" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
-                                    <span class="o_sc_uom" t-out="line.pack.name"/>
-                                </div>
-                                <span class="o_sc_plus_sign">+</span>
+                            <t t-if="unitsOf(line).length">
+                                <t t-foreach="unitsOf(line)" t-as="unit" t-key="unit.id">
+                                    <div class="o_sc_field">
+                                        <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" t-att-data-kind="'unit:' + unit.id" placeholder="—"
+                                               t-att-aria-label="unit.name" t-att-value="cell(line, 'unit:' + unit.id)"
+                                               t-on-focus="onFieldFocus" t-on-input="onTyping" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
+                                        <span class="o_sc_uom" t-out="unit.name"/>
+                                    </div>
+                                    <span class="o_sc_plus_sign">+</span>
+                                </t>
                                 <div class="o_sc_field">
                                     <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="loose" placeholder="—"
                                            t-att-aria-label="line.uom_name" t-att-value="cell(line, 'loose')"
@@ -230,7 +232,7 @@
                             </t>
                             <button type="button" class="o_sc_plus" t-on-click="() => this.addQuantity(line, 1)" title="Sumar una unidad">+1</button>
                         </div>
-                        <div t-if="line.pack and line.done" class="o_sc_total" t-out="totalLabel(line)"/>
+                        <div t-if="unitsOf(line).length and line.done" class="o_sc_total" t-out="totalLabel(line)"/>
                     </div>
                 </t>
                 <div class="o_sc_actions">

@@ -49,11 +49,11 @@ class ProductPackaging(models.Model):
     stock_count_default = fields.Boolean(
         string="Recuento",
         help="Embalaje en el que se cuenta este producto en los recuentos de inventario: "
-        "el contador carga embalajes y unidades sueltas. Uno solo por producto; si no hay "
-        "ninguno marcado, se cuenta en la unidad de medida del producto.",
+        "el contador carga cada embalaje marcado y las unidades sueltas en casilleros "
+        "separados. Si no hay ninguno marcado, se cuenta en la unidad de medida del producto.",
     )
 
-    @api.constrains("stock_count_default", "product_id", "qty")
+    @api.constrains("stock_count_default", "qty")
     def _check_stock_count_default(self):
         for packaging in self.filtered("stock_count_default"):
             if packaging.qty <= 0:
@@ -61,21 +61,6 @@ class ProductPackaging(models.Model):
                     self.env._(
                         "%s: un embalaje de recuento tiene que traer una cantidad mayor a cero.",
                         packaging.name,
-                    )
-                )
-            others = self.search_count(
-                [
-                    ("product_id", "=", packaging.product_id.id),
-                    ("stock_count_default", "=", True),
-                    ("id", "!=", packaging.id),
-                ],
-                limit=1,
-            )
-            if others:
-                raise ValidationError(
-                    self.env._(
-                        "%s ya tiene otro embalaje marcado para recuento. Puede haber uno solo.",
-                        packaging.product_id.display_name,
                     )
                 )
 
@@ -90,9 +75,28 @@ class ProductProduct(models.Model):
         self.ensure_one()
         return self.packaging_ids.filtered(lambda packaging: packaging.qty > 0)
 
-    def _stock_count_default_pack(self):
+    def _stock_count_default_packs(self):
+        """Unidades de recuento del producto: las que toma una línea nueva."""
         self.ensure_one()
-        return self.packaging_ids.filtered("stock_count_default")[:1]
+        return self.packaging_ids.filtered(
+            lambda packaging: packaging.stock_count_default and packaging.qty > 0
+        )
+
+    def _stock_count_units_payload(self, packs):
+        """Embalajes → [{id, name, factor}] de mayor a menor, con la equivalencia en la
+        unidad del producto. Es lo que la línea guarda congelado."""
+        self.ensure_one()
+        units = [
+            {
+                "id": pack.id,
+                "name": pack.display_name,
+                "factor": self._stock_count_pack_factor(pack),
+            }
+            for pack in packs
+        ]
+        return sorted(
+            (unit for unit in units if unit["factor"] > 0), key=lambda unit: -unit["factor"]
+        )
 
     def _stock_count_pack_factor(self, pack):
         """Cuántas unidades de medida del producto trae un embalaje."""

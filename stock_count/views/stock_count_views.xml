@@ -86,7 +86,7 @@
                                     <field name="product_id" readonly="1"/>
                                     <field name="lot_id" optional="show" readonly="1"/>
                                     <field name="product_uom_id" optional="show" readonly="1"/>
-                                    <field name="count_pack_id" optional="hide" readonly="1"/>
+                                    <field name="count_unit_names" optional="hide"/>
                                     <field name="qty_theoretical" invisible="blind and not parent.is_manager"/>
                                     <field name="theoretical_breakdown" optional="hide" invisible="blind and not parent.is_manager"/>
                                     <field name="counted_breakdown" optional="show"/>

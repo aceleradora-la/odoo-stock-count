@@ -206,6 +206,9 @@
     .o_sc_line_pack .o_sc_field { flex: 0 1 auto; }
     .o_sc_line_pack .o_sc_qty { flex: 0 1 84px; width: 84px; min-width: 48px; }
     .o_sc_line_pack .o_sc_uom { max-width: 78px; }
+    // Varias unidades de recuento: los casilleros bajan a una fila propia, a todo el ancho.
+    .o_sc_line_multi .o_sc_line_inputs { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-end; }
+    .o_sc_line_multi .o_sc_qty { flex: 0 1 64px; width: 64px; }
     .o_sc_line_label {
         font-size: 14px;
         font-weight: 600;

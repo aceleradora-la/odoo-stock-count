@@ -1300,7 +1300,7 @@ class StockCount(models.Model):
                 (line.note or "", None),
                 (self.env._("Sí") if line.moved_during_count else "", None),
                 (states.get(line.state, line.state), None),
-                (line.count_pack_id.display_name or "", None),
+                (line.count_unit_names or "", None),
                 (line.counted_breakdown or "", None),
                 (line.theoretical_breakdown or "", None),
             ]

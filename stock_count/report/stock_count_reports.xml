@@ -64,8 +64,8 @@
                                             <td><span t-out="line.lot_id.name or ''"/></td>
                                             <td><span t-out="line.product_uom_id.name"/></td>
                                             <td style="border:1px solid #999; height:28px; vertical-align:bottom">
-                                                <div t-if="line.count_pack_id" class="d-flex justify-content-between" style="font-size:8px; color:#555">
-                                                    <span t-out="line.count_pack_id.display_name"/>
+                                                <div t-if="line.count_units" class="d-flex justify-content-between" style="font-size:8px; color:#555">
+                                                    <t t-foreach="line.count_units" t-as="unit"><span t-out="unit['name']"/></t>
                                                     <span>+ sueltas</span>
                                                 </div>
                                             </td>
@@ -179,7 +179,7 @@
                                     <td><span t-out="line.location_id.complete_name"/></td>
                                     <td><span t-out="line.product_id.display_name"/>
                                         <span t-if="line.moved_during_count" class="badge text-bg-warning ms-1">movido</span>
-                                        <div t-if="line.count_pack_id" class="small text-muted">
+                                        <div t-if="line.count_units" class="small text-muted">
                                             Contado: <span t-out="line.counted_breakdown"/> · Teórico: <span t-out="line.theoretical_breakdown"/>
                                         </div></td>
                                     <td><span t-out="line.lot_id.name or ''"/></td>
