@@ -181,8 +181,9 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
         self.pallet = self._make_pack(
             self.egg, "Pallet x120", 120.0, barcode="PL120", default=True
         )
-        count = self._count()
-        return count, count.line_ids
+        # Con otro producto pendiente, el recuento sigue en conteo mientras se prueba
+        count = self._count(self.egg | self.roller)
+        return count, self._line(count, self.egg)
 
     def test_several_count_units_have_one_box_each(self):
         count, egg = self._pallet_count()

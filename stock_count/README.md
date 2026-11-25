@@ -13,6 +13,7 @@ celular. Vista general e instalación en el [README del repositorio](../README.m
 | Inventario › Operaciones › Recuentos › **Mis líneas de conteo** | Lista de las líneas del usuario, para cargar desde el escritorio |
 | Inventario › Informes › **Análisis de recuentos** | Diferencias de los recuentos validados |
 | Inventario › Configuración › **Motivos de diferencia** | Motivos que se asignan a las diferencias |
+| Inventario › **Información general** | Tarjeta *Recuentos* de cada depósito: por contar, en revisión y en borrador |
 
 ## Usuarios
 
@@ -33,9 +34,16 @@ En el recuento se define:
 - **Bloqueo de movimientos**, umbrales de reconteo, tolerancia de aprobación y *Reconteo
   inmediato*. Toman por defecto los valores de los ajustes de Inventario.
 
-**Confirmar** genera una línea por producto, ubicación, lote, paquete y propietario con la
-cantidad del sistema de ese momento. No se puede confirmar si otro recuento activo ya
-cubre el mismo producto en la misma ubicación.
+**Confirmar** genera una línea por producto, ubicación, lote, paquete y propietario. No se
+puede confirmar si otro recuento activo ya cubre el mismo producto en la misma ubicación.
+Un recuento confirmado todavía no bloquea movimientos: se puede repartir e imprimir la
+hoja de conteo con el depósito trabajando.
+
+**Iniciar conteo** toma la cantidad del sistema de ese momento como teórico y empieza el
+bloqueo de movimientos. Si el stock cambió desde la confirmación, las líneas se ponen al
+día: se actualiza la cantidad, se agregan los productos o lotes que aparecieron y se
+quitan las líneas pendientes que ya no tienen stock. El conteo también se inicia solo
+cuando un contador carga la primera cantidad.
 
 **Repartir líneas** asigna las líneas a los contadores: por ubicación (cada ubicación
 entera a un contador, balanceando la carga) o línea por línea. Una línea asignada solo la
@@ -43,14 +51,18 @@ carga su contador o el supervisor; una sin asignar, cualquier contador del recue
 
 ## Bloqueo de movimientos
 
-Desde la confirmación hasta la validación o cancelación, cada producto en su ubicación
-(y lote) queda controlado según el modo del recuento:
+Desde el inicio del conteo hasta la validación o cancelación, cada producto en su
+ubicación (y lote) queda controlado según el modo de bloqueo:
 
 | Modo | Al validar un movimiento del producto en esa ubicación |
 |---|---|
 | Bloquear la validación | Se rechaza, con un mensaje que indica producto, ubicación, recuento y supervisor. Aplica a transferencias, fabricación, punto de venta, desechos y ajustes manuales. La reserva sigue permitida |
 | Avisar y marcar la línea | El movimiento pasa, la línea queda marcada como *Movido durante el conteo* y el recuento lo registra en su historial |
 | Sin control | El movimiento pasa. Al validar el recuento se detecta igual si el stock cambió |
+
+El modo se define en el recuento. Una categoría de producto o un producto pueden tener
+el suyo (campo *Bloqueo de movimientos en recuento*): manda el del producto, después el
+de su categoría y por último el del recuento.
 
 Los productos en recuento no se pueden ajustar desde Inventario físico: el ajuste sale del
 recuento. La lista de Inventario físico muestra la columna *En recuento*.
@@ -87,14 +99,16 @@ sobre la **hoja de conteo** impresa.
 
 ## Conteo en embalajes
 
-Un producto se puede contar en un embalaje (caja, pack, bobina). El contador carga
-**embalajes + sueltas** y el recuento calcula el total en la unidad del producto.
+Un producto se puede contar en uno o varios embalajes (pallet, caja, pack, bobina). El
+contador carga un casillero por embalaje y otro para las **sueltas**, y el recuento calcula
+el total en la unidad del producto.
 
-- **Odoo 19:** campo *Unidad de recuento* en la pestaña Inventario del producto, entre sus
-  embalajes.
-- **Odoo 18:** columna *Recuento* en los embalajes del producto, uno por producto.
-- En la app, el contador puede cambiar la unidad de cada renglón entre la unidad del
-  producto y sus embalajes. Lo ya cargado se conserva.
+- **Odoo 19:** campo *Unidades de recuento* en la pestaña Inventario del producto: uno o
+  varios de sus embalajes.
+- En la app, el contador puede cambiar cada renglón entre la unidad del producto, uno
+  solo de sus embalajes o todas las unidades de recuento. Lo ya cargado se conserva.
+- Una cantidad cargada en la unidad del producto se reparte llenando primero el embalaje
+  más grande. Escanear el código de un embalaje suma uno en su casillero.
 - La hoja de conteo, el informe de diferencias y el Excel muestran el desglose.
 
 ## Reconteo y aprobación
@@ -116,6 +130,17 @@ Cuando se carga la última línea, el recuento pasa a **En revisión** y clasifi
   esperar a que termine el conteo. Lo contado de a una unidad (escaneo, +1) se evalúa al
   terminar la ubicación.
 
+**Umbrales por categoría o producto.** Una categoría de producto o un producto pueden
+tener *Umbrales de recuento propios* (reconteo por % y por unidades, aprobación automática
+y valor mínimo). Manda el producto, después su categoría o la primera categoría superior
+que los tenga, y por último los del recuento.
+
+**Avisos.** Cuando el recuento queda con líneas para aprobar, el supervisor del recuento
+recibe la actividad *Aprobar recuento*. Cada contador con líneas en reconteo recibe la
+actividad *Segundo conteo*. Las actividades se cierran solas cuando ya no hay nada que
+hacer. Aprueba cualquier usuario del grupo Supervisor; el aviso va al supervisor del
+recuento.
+
 Acciones del supervisor, por línea o en bloque: **Aprobar**, **Pedir reconteo**, **Aceptar
 1er conteo**, **Omitir**, asignar **motivo**. Desde la app, la tarjeta **Supervisar**
 muestra el avance por contador y las líneas para resolver, ordenadas por valor.
@@ -126,7 +151,9 @@ Con todas las líneas aprobadas u omitidas el recuento se valida solo; también 
 **Validar**.
 
 - Genera los ajustes de inventario con el nombre del recuento como referencia. Los
-  movimientos quedan enlazados al recuento y a la línea.
+  movimientos quedan enlazados al recuento y a la línea, y llevan el tipo de operación
+  *Recuentos* del depósito. En el historial de movimientos se encuentran con el filtro
+  *Ajustes de recuentos* o buscando por ese tipo de operación.
 - Si el motivo de la diferencia tiene *Ubicación de destino*, el faltante va a esa
   ubicación (por ejemplo, Desechos).
 - Si el stock de una línea cambió después de la confirmación, el recuento no se valida:
@@ -146,10 +173,13 @@ ni el stock de los productos en recuento. El supervisor ve todo.
 | Reporte | Contenido |
 |---|---|
 | Hoja de conteo (PDF) | Por contador y ubicación, con códigos de barras y columna para anotar. No muestra la cantidad del sistema |
-| Informe de diferencias (PDF) | Líneas con diferencia ordenadas por valor: sistema, primer y segundo conteo, porcentaje, valor, motivo y contador |
+| Informe de diferencias (PDF) | A4 apaisado. Líneas con diferencia ordenadas por valor: sistema, primer y segundo conteo, porcentaje, valor, motivo y contador |
 | Exportar Excel | Todas las líneas del recuento |
 | Análisis de recuentos | Tabla dinámica y gráfico por ubicación, depósito, producto, categoría, motivo, contador y mes |
 | Ubicación | Recuentos validados, fecha del último y precisión de los últimos cinco |
+
+**Precisión** es el porcentaje de líneas contadas sin diferencia o con una diferencia
+dentro de *Aprobar automáticamente hasta (%)*.
 
 ## Datos técnicos
 

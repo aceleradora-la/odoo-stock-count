@@ -30,12 +30,14 @@ genera los ajustes de inventario. Para Odoo Community y Enterprise.
    lista, una categoría o lotes), el supervisor, los contadores y el modo de bloqueo. El
    recuento toma un número `RC/AAAA/00001`.
 2. **Confirmar.** El recuento genera una línea por cada producto, lote, paquete y
-   propietario en stock dentro del alcance, con la cantidad del sistema guardada en ese
-   momento. Desde acá los movimientos de esos productos en esas ubicaciones quedan
-   controlados según el modo de bloqueo.
-3. **Contar.** Cada contador abre la app **Recuentos**, entra a una ubicación y carga las
-   cantidades escribiendo o escaneando. También se puede contar desde el escritorio o
-   sobre la hoja de conteo impresa.
+   propietario en stock dentro del alcance. Ya se puede repartir entre los contadores e
+   imprimir la hoja de conteo; los movimientos todavía no se bloquean.
+3. **Contar.** Al iniciar el conteo (botón *Iniciar conteo* o la primera cantidad
+   cargada) el recuento toma la cantidad del sistema de ese momento y los movimientos de
+   esos productos en esas ubicaciones quedan controlados según el modo de bloqueo. Cada
+   contador abre la app **Recuentos**, entra a una ubicación y carga las cantidades
+   escribiendo o escaneando. También se puede contar desde el escritorio o sobre la hoja
+   de conteo impresa.
 4. **Recontar.** Las líneas cuya diferencia supera el umbral vuelven al contador para un
    segundo conteo. El segundo conteo es el que vale.
 5. **Revisar.** El supervisor ve las diferencias en unidades, porcentaje y valor, y
@@ -47,8 +49,8 @@ genera los ajustes de inventario. Para Odoo Community y Enterprise.
 | Estado | Qué significa |
 |---|---|
 | Borrador | Se está definiendo el alcance |
-| Confirmado | Líneas generadas y movimientos controlados; todavía nadie contó |
-| En conteo | Los contadores están cargando cantidades |
+| Confirmado | Líneas generadas, sin bloqueo; todavía nadie contó |
+| En conteo | Teórico tomado y movimientos controlados; los contadores cargan cantidades |
 | En revisión | Todo contado; quedan reconteos o aprobaciones |
 | Validado | Ajustes de inventario generados |
 | Cancelado | Sin ajustes; los productos quedan liberados |
@@ -89,7 +91,11 @@ Otros puntos de configuración:
 
 - **Usuarios.** Grupos *Contador* y *Supervisor* en la ficha del usuario.
 - **Motivos de diferencia.** Inventario › Configuración › Motivos de diferencia.
-- **Unidad de recuento.** En el producto, para contarlo en cajas o packs.
+- **Unidades de recuento.** En el producto, para contarlo en pallets, cajas o packs.
+- **Umbrales y bloqueo por categoría o producto.** En la categoría de producto o en el
+  producto, cuando necesitan valores distintos a los del recuento.
+- **Tipo de operación Recuentos.** Uno por depósito, creado al instalar: muestra los
+  recuentos en el tablero de Inventario y etiqueta los ajustes que generan.
 - **Reglas de conteo cíclico.** Inventario › Configuración › Reglas de conteo cíclico
   (módulo `stock_count_cycle`).
 
