@@ -8,3 +8,4 @@ from . import test_stock_count_app
 from . import test_stock_count_review_fixes
 from . import test_stock_count_packs
 from . import test_stock_count_supervisor
+from . import test_stock_count_dashboard
