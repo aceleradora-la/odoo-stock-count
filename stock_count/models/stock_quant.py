@@ -23,7 +23,7 @@ class StockQuant(models.Model):
         Cubre el botón Aplicar de Inventario físico, la aplicación automática y el
         borrado manual de quants (que también pasa por acá).
         """
-        if not self.env.context.get("stock_count_line_id"):
+        if not self.env.context.get("stock_count_id"):
             taken = self.filtered("count_line_id")
             if taken:
                 detail = "\n".join(
@@ -45,7 +45,7 @@ class StockQuant(models.Model):
     ):
         """Enlaza el ajuste al recuento y redirige la pérdida al destino del motivo."""
         ctx = self.env.context
-        loss_location_id = ctx.get("stock_count_loss_location_id")
+        loss_location_id = (ctx.get("stock_count_loss_by_quant") or {}).get(self.id)
         if loss_location_id and location_dest_id.usage == "inventory":
             location_dest_id = self.env["stock.location"].browse(loss_location_id)
         vals = super()._get_inventory_move_values(
@@ -57,8 +57,9 @@ class StockQuant(models.Model):
         )
         if ctx.get("stock_count_id"):
             vals["count_id"] = ctx["stock_count_id"]
-        if ctx.get("stock_count_line_id"):
+        line_id = (ctx.get("stock_count_line_by_quant") or {}).get(self.id)
+        if line_id:
             for command in vals.get("move_line_ids", []):
                 if len(command) == 3 and isinstance(command[2], dict):
-                    command[2]["count_line_id"] = ctx["stock_count_line_id"]
+                    command[2]["count_line_id"] = line_id
         return vals

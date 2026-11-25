@@ -118,7 +118,7 @@
                 </div>
             </div>
             <div class="o_sc_footer">
-                <button type="button" class="o_sc_btn o_sc_btn_secondary" t-on-click="openAddProduct" t-att-disabled="state.busy">
+                <button type="button" class="o_sc_btn o_sc_btn_secondary" t-on-click="() => this.openAddProduct()" t-att-disabled="state.busy">
                     <i class="fa fa-plus me-1"/> Producto no esperado
                 </button>
                 <button type="button" t-attf-class="o_sc_btn {{ allClosed ? 'o_sc_btn_primary' : 'o_sc_btn_secondary' }}"
@@ -149,33 +149,62 @@
             </div>
             <div class="o_sc_body o_sc_location">
                 <t t-foreach="currentLines" t-as="line" t-key="line.id">
-                    <div t-attf-class="o_sc_line {{ line.done ? '' : 'o_sc_line_empty' }} {{ line.is_recount ? 'o_sc_line_recount' : '' }}" t-att-data-line-id="line.id">
+                    <div t-attf-class="o_sc_line {{ line.done ? '' : 'o_sc_line_empty' }} {{ line.is_recount ? 'o_sc_line_recount' : '' }} {{ line.pack ? 'o_sc_line_pack' : '' }}"
+                         t-att-data-line-id="line.id" t-on-focusout="(ev) => this.onRowFocusOut(line, ev)">
                         <div class="o_sc_line_info">
-                            <label t-attf-for="o_sc_line_{{ line.id }}" class="o_sc_line_label" t-out="line.product_name"/>
+                            <div class="o_sc_line_label" t-out="line.product_name"/>
                             <div class="o_sc_line_meta">
                                 <span t-if="line.product_code" t-out="line.product_code"/>
-                                <span t-if="line.lot_name" class="o_sc_tag">Lote <t t-out="line.lot_name"/></span>
+                                <span t-if="line.lot_name" class="o_sc_tag"><t t-if="line.is_serial">Serie</t><t t-else="">Lote</t> <t t-out="line.lot_name"/></span>
+                                <span t-if="line.package_name" class="o_sc_tag">Paquete <t t-out="line.package_name"/></span>
+                                <span t-if="line.owner_name" class="o_sc_tag">De <t t-out="line.owner_name"/></span>
                                 <span t-if="line.is_recount" class="o_sc_tag o_sc_tag_warn">2° conteo</span>
                             </div>
+                            <select t-if="line.pack_options and line.pack_options.length > 1" class="o_sc_unit" aria-label="Unidad de recuento"
+                                    t-on-change="(ev) => this.changeUnit(line, ev)">
+                                <t t-foreach="line.pack_options" t-as="option" t-key="option.id || 0">
+                                    <option t-att-value="option.id || ''" t-att-selected="(line.pack ? line.pack.id : false) === option.id" t-out="option.name"/>
+                                </t>
+                            </select>
                         </div>
-                        <input t-attf-id="o_sc_line_{{ line.id }}" type="number" inputmode="decimal" enterkeyhint="next"
-                               class="o_sc_qty" min="0" step="any" placeholder="—"
-                               t-att-value="line.done ? line.quantity : ''"
-                               t-att-disabled="state.busy"
-                               t-on-change="(ev) => this.onQuantityChange(line, ev)"
-                               t-on-keydown="(ev) => this.onQuantityKeydown(line, ev)"/>
-                        <span class="o_sc_uom" t-out="line.uom_name"/>
-                        <button type="button" class="o_sc_plus" t-att-disabled="state.busy" t-on-click="() => this.addOne(line, 1)" title="Sumar una unidad">+1</button>
+                        <div class="o_sc_line_inputs">
+                            <t t-if="line.pack">
+                                <div class="o_sc_field">
+                                    <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="packs" placeholder="—"
+                                           t-att-aria-label="line.pack.name" t-att-value="cell(line, 'packs')"
+                                           t-on-focus="selectOnFocus" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
+                                    <span class="o_sc_uom" t-out="line.pack.name"/>
+                                </div>
+                                <span class="o_sc_plus_sign">+</span>
+                                <div class="o_sc_field">
+                                    <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="loose" placeholder="—"
+                                           t-att-aria-label="line.uom_name" t-att-value="cell(line, 'loose')"
+                                           t-on-focus="selectOnFocus" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
+                                    <span class="o_sc_uom" t-out="line.uom_name"/>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="o_sc_field">
+                                    <input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" class="o_sc_qty" data-kind="qty" placeholder="—"
+                                           t-att-aria-label="line.product_name" t-att-value="cell(line, 'qty')"
+                                           t-on-focus="selectOnFocus" t-on-keydown="(ev) => this.onQtyKeydown(line, ev)"/>
+                                    <span class="o_sc_uom" t-out="line.uom_name"/>
+                                </div>
+                            </t>
+                            <button type="button" class="o_sc_plus" t-on-click="() => this.addQuantity(line, 1)" title="Sumar una unidad">+1</button>
+                        </div>
+                        <div t-if="line.pack and line.done" class="o_sc_total" t-out="totalLabel(line)"/>
                     </div>
                 </t>
                 <div class="o_sc_actions">
-                    <button type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-on-click="openAddProduct" t-att-disabled="state.busy"><i class="fa fa-plus me-1"/> Producto</button>
+                    <button type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-on-click="() => this.openAddProduct()" t-att-disabled="state.busy"><i class="fa fa-plus me-1"/> Producto</button>
                     <button type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-on-click="nextLocation" t-att-disabled="state.busy">Siguiente <i class="fa fa-arrow-right ms-1"/></button>
                     <button type="button" class="o_sc_btn o_sc_btn_primary o_sc_btn_small" t-on-click="() => this.finish(true)" t-att-disabled="state.busy"><i class="fa fa-check me-1"/> Terminar</button>
                 </div>
                 <div class="o_sc_hint">
-                    Enter pasa al producto de abajo. Escanear un producto suma 1. Terminar registra en 0 lo que quede sin cantidad.
+                    Enter pasa al casillero siguiente. Escanear un producto suma 1; el código de un embalaje suma un embalaje. Terminar registra en 0 lo que quede sin cantidad.
                 </div>
+                <div t-if="state.saving" class="o_sc_saving"><i class="fa fa-circle-o-notch fa-spin me-1"/> Guardando…</div>
             </div>
         </t>
 

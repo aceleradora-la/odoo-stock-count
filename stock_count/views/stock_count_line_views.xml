@@ -44,7 +44,7 @@
                 <field name="count_id"/>
                 <filter name="mine" string="Mis líneas" domain="[('assigned_user_id', '=', uid)]"/>
                 <filter name="pending" string="Pendientes" domain="[('state', 'in', ('pending', 'recount'))]"/>
-                <filter name="with_diff" string="Con diferencia" domain="[('qty_diff', '!=', 0), ('state', 'not in', ('pending', 'skipped'))]"/>
+                <filter name="with_diff" string="Con diferencia" domain="[('qty_diff', '!=', 0), ('state', 'not in', ('pending', 'skipped'))]" groups="stock_count.group_stock_count_manager"/>
                 <filter name="moved" string="Movidas durante el conteo" domain="[('moved_during_count', '=', True)]"/>
                 <separator/>
                 <filter name="active_counts" string="Recuentos activos" domain="[('count_state', 'in', ('ready', 'counting', 'review'))]"/>
