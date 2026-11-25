@@ -195,12 +195,14 @@
                                 <span t-if="line.is_recount" class="o_sc_tag o_sc_tag_warn">2° conteo</span>
                                 <span t-if="isUnsent(line)" class="o_sc_tag o_sc_tag_unsent"><i class="fa fa-clock-o"/> sin enviar</span>
                             </div>
-                            <select t-if="line.pack_options and line.pack_options.length > 1" class="o_sc_unit" aria-label="Unidad de recuento"
-                                    t-on-change="(ev) => this.changeUnit(line, ev)">
-                                <t t-foreach="line.pack_options" t-as="option" t-key="option.id || 0">
-                                    <option t-att-value="option.id || ''" t-att-selected="(line.pack ? line.pack.id : false) === option.id" t-out="option.name"/>
-                                </t>
-                            </select>
+                            <label t-if="line.pack_options and line.pack_options.length > 1" class="o_sc_unit_label">
+                                <span>Contar en</span>
+                                <select class="o_sc_unit" t-on-change="(ev) => this.changeUnit(line, ev)">
+                                    <t t-foreach="line.pack_options" t-as="option" t-key="option.id || 0">
+                                        <option t-att-value="option.id || ''" t-att-selected="(line.pack ? line.pack.id : false) === option.id" t-out="option.name"/>
+                                    </t>
+                                </select>
+                            </label>
                         </div>
                         <div class="o_sc_line_inputs">
                             <t t-if="line.pack">

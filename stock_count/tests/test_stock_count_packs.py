@@ -60,6 +60,9 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
             {option["id"] for option in data["pack_options"]},
             {False, self.box.id, self.sixpack.id},
         )
+        names = [option["name"] for option in data["pack_options"]]
+        self.assertEqual(names[0], self.egg.uom_id.name)
+        self.assertIn("Caja x30", names, "el nombre ya dice cuánto trae: no se repite")
         self.assertEqual(roller.sudo()._counter_line_data()["pack_options"], [])
 
         updated = self._as_counter(egg).counter_set_quantity(packs=12, loose=7)

@@ -199,11 +199,13 @@
     .o_sc_line_empty { background: #f9fafb; border-style: dashed; border-color: #9ca3af; }
     .o_sc_line_recount { background: #fffbeb; }
     .o_sc_line_info { flex: 1 1 140px; min-width: 0; }
-    // Con embalaje, el nombre va arriba y los dos casilleros abajo, a todo el ancho
-    .o_sc_line_pack .o_sc_line_info { flex-basis: 100%; }
-    .o_sc_line_pack .o_sc_line_inputs { flex: 1 1 100%; }
-    .o_sc_line_pack .o_sc_field { flex: 1 1 0; }
-    .o_sc_line_pack .o_sc_qty { flex: 1 1 auto; width: auto; min-width: 56px; }
+    // Con embalaje: dos casilleros del mismo tamaño que el de un renglón común, a la
+    // derecha. Si no entran al lado del nombre (celular), bajan a su propia fila y se
+    // achican sin salirse de la tarjeta.
+    .o_sc_line_pack .o_sc_line_inputs { flex: 0 1 auto; max-width: 100%; }
+    .o_sc_line_pack .o_sc_field { flex: 0 1 auto; }
+    .o_sc_line_pack .o_sc_qty { flex: 0 1 84px; width: 84px; min-width: 48px; }
+    .o_sc_line_pack .o_sc_uom { max-width: 78px; }
     .o_sc_line_label {
         font-size: 14px;
         font-weight: 600;
@@ -215,8 +217,17 @@
     .o_sc_line_meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: $sc-muted; margin-top: 2px; }
     .o_sc_tag { padding: 0 6px; border-radius: 8px; background: #eef0f3; }
     .o_sc_tag_warn { background: #fff1cc; color: #8a5a00; font-weight: 600; }
+    .o_sc_unit_label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 4px 0 0;
+        font-size: 11px;
+        color: $sc-muted;
+    }
     .o_sc_unit {
-        margin-top: 4px;
+        width: auto; // Odoo estira los select al 100 %
+        min-width: 0;
         max-width: 100%;
         height: 28px;
         padding: 0 6px;
@@ -227,7 +238,8 @@
         font-size: 12px;
         font-weight: 600;
     }
-    .o_sc_line_inputs { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+    // margin-left: auto → si los casilleros bajan a su propia fila, quedan a la derecha
+    .o_sc_line_inputs { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; min-width: 0; margin-left: auto; }
     .o_sc_field { display: flex; align-items: center; gap: 4px; min-width: 0; }
     .o_sc_plus_sign { color: $sc-muted; font-weight: 700; }
     .o_sc_qty {
@@ -246,7 +258,8 @@
         outline: none;
         &:focus { border: 2px solid $sc-primary; }
     }
-    .o_sc_uom { flex: 0 1 auto; min-width: 20px; font-size: 11px; line-height: 1.1; color: $sc-muted; overflow-wrap: anywhere; }
+    // El nombre de la unidad corta entre palabras, nunca en el medio ("Unidade s")
+    .o_sc_uom { flex: 0 1 auto; min-width: min-content; font-size: 11px; line-height: 1.15; color: $sc-muted; }
     .o_sc_total { flex: 1 1 100%; text-align: right; font-size: 12px; font-weight: 600; color: $sc-primary; }
     .o_sc_plus {
         flex: 0 0 44px;
