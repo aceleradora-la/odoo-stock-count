@@ -29,8 +29,14 @@ En el recuento se define:
 
 - **Depósito y ubicaciones**, con o sin sub-ubicaciones.
 - **Alcance**: todos los productos, productos seleccionados, una categoría o lotes /
-  números de serie. *Incluir stock en cero* agrega líneas para productos del alcance que
-  no tienen stock en la ubicación.
+  números de serie.
+- **Incluir stock en cero**: agrega una línea en cero por cada producto del alcance que
+  no tiene stock en la ubicación y tuvo movimientos ahí desde su último recuento
+  validado. Vale para cualquier alcance. Un producto que nunca se contó en esa ubicación
+  entra con cualquier movimiento. Un recuento de *todos los productos* cuenta como
+  último recuento de todo lo que hay en sus ubicaciones. Los productos por lote llevan
+  una línea por lote; los de número de serie no se incluyen. Los ajustes de los
+  recuentos no cuentan como movimiento.
 - **Supervisor y contadores.**
 - **Bloqueo de movimientos**, umbrales de reconteo, tolerancia de aprobación y *Reconteo
   inmediato*. Toman por defecto los valores de los ajustes de Inventario.
