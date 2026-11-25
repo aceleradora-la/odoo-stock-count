@@ -274,3 +274,40 @@ class TestStockCountSupervisor(Phase3Common, TransactionCase):
         self._as_counter(screw).counter_set_quantity(100.0)
         self.assertEqual(count.state, "done")
         self.assertFalse(self._activities(count, recount))
+
+    # ------------------------------------------------------------------
+    # Umbrales por categoría y por producto
+    # ------------------------------------------------------------------
+    def test_category_and_product_thresholds_override_the_count(self):
+        """El recuento recuenta sobre 5 % y aprueba hasta 1 %. La categoría de los
+        rodillos aprueba hasta 30 %; el tornillo, por producto, recuenta recién sobre 50 %."""
+        parent = self.env["product.category"].create(
+            {
+                "name": "Herramientas",
+                "stock_count_custom": True,
+                "stock_count_auto_approve_pct": 30.0,
+                "stock_count_recount_threshold_pct": 40.0,
+            }
+        )
+        child = self.env["product.category"].create({"name": "Rodillos", "parent_id": parent.id})
+        self.roller.categ_id = child
+        self.screw.product_tmpl_id.write(
+            {
+                "stock_count_custom": True,
+                "stock_count_recount_threshold_pct": 50.0,
+                "stock_count_auto_approve_pct": 1.0,
+            }
+        )
+        count = self._count()
+        screw, roller = self._line(count, self.screw), self._line(count, self.roller)
+        paint = self._line(count, self.paint, self.lot_a)
+        self.assertEqual(count._line_params(roller)["auto_approve_tolerance_pct"], 30.0)
+        self.assertEqual(count._line_params(screw)["recount_threshold_pct"], 50.0)
+        self.assertEqual(count._line_params(paint)["recount_threshold_pct"], 5.0)
+        screw.write({"qty_counted": 80.0})  # −20 %: el recuento lo recontaría
+        roller.write({"qty_counted": 30.0})  # −25 %: la categoría lo aprueba
+        paint.write({"qty_counted": 30.0})  # −16,7 %: rige el recuento → reconteo
+        self.assertEqual(count.state, "review")
+        self.assertEqual(screw.state, "counted", "sin reconteo: espera al supervisor")
+        self.assertEqual(roller.state, "approved")
+        self.assertEqual(paint.state, "recount")

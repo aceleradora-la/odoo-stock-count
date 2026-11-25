@@ -333,13 +333,17 @@ class StockCountLine(models.Model):
         domain = [
             ("count_state", "in", ("counting", "review")),
             ("state", "not in", ("applied", "skipped")),
-            ("count_id.lock_mode", "!=", "none"),
             ("product_id", "in", products.ids),
             ("location_id", "in", locations.ids),
         ]
         if companies:
             domain.append(("company_id", "in", companies.ids))
-        return self.search(domain)
+        return self.search(domain).filtered(lambda line: line._lock_mode() != "none")
+
+    def _lock_mode(self):
+        """Bloqueo que rige la línea: el del producto, el de su categoría o el del recuento."""
+        self.ensure_one()
+        return self.product_id.sudo()._stock_count_lock_mode() or self.count_id.lock_mode
 
     # ------------------------------------------------------------------
     # ORM: cargar un conteo registra quién y cuándo, y avanza el estado

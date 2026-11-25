@@ -1,9 +1,46 @@
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
+from .res_company import LOCK_MODES
+
+
+class StockCountParamsMixin(models.AbstractModel):
+    _name = "stock.count.params.mixin"
+    _description = "Parámetros de recuento propios (producto o categoría)"
+
+    stock_count_custom = fields.Boolean(
+        string="Umbrales de recuento propios",
+        help="Los recuentos usan estos umbrales para este producto o categoría, en lugar de "
+        "los del recuento. El producto manda sobre la categoría, y una categoría sobre su "
+        "categoría superior.",
+    )
+    stock_count_recount_threshold_pct = fields.Float(
+        string="Reconteo si la diferencia supera (%)", digits=(16, 2)
+    )
+    stock_count_recount_threshold_qty = fields.Float(
+        string="Reconteo si la diferencia supera (unidades)", digits="Product Unit of Measure"
+    )
+    stock_count_auto_approve_pct = fields.Float(
+        string="Aprobar automáticamente hasta (%)", digits=(16, 2)
+    )
+    stock_count_recount_min_value = fields.Float(
+        string="No recontar si el valor es menor a", digits="Product Price"
+    )
+    stock_count_lock_mode = fields.Selection(
+        LOCK_MODES,
+        string="Bloqueo de movimientos en recuento",
+        help="Vacío: el que defina cada recuento.",
+    )
+
+
+class ProductCategory(models.Model):
+    _name = "product.category"
+    _inherit = ["product.category", "stock.count.params.mixin"]
+
 
 class ProductTemplate(models.Model):
-    _inherit = "product.template"
+    _name = "product.template"
+    _inherit = ["product.template", "stock.count.params.mixin"]
 
     stock_count_pack_id = fields.Many2one(
         "uom.uom",
@@ -57,6 +94,30 @@ class ProductProduct(models.Model):
         """Cuántas unidades de medida del producto trae un embalaje."""
         self.ensure_one()
         return pack._compute_quantity(1.0, self.uom_id, round=False) if pack else 0.0
+
+    def _stock_count_params_source(self):
+        """Registro (producto o categoría) del que salen los umbrales, o vacío si rigen
+        los del recuento."""
+        self.ensure_one()
+        if self.stock_count_custom:
+            return self.product_tmpl_id
+        categ = self.categ_id
+        while categ:
+            if categ.stock_count_custom:
+                return categ
+            categ = categ.parent_id
+        return self.env["product.category"]
+
+    def _stock_count_lock_mode(self):
+        self.ensure_one()
+        if self.stock_count_lock_mode:
+            return self.stock_count_lock_mode
+        categ = self.categ_id
+        while categ:
+            if categ.stock_count_lock_mode:
+                return categ.stock_count_lock_mode
+            categ = categ.parent_id
+        return False
 
     @api.model
     def _stock_count_find_pack_barcode(self, barcode):

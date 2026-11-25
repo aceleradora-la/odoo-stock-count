@@ -124,7 +124,7 @@ class StockMoveLine(models.Model):
                         continue
                     if count_line.company_id and ml.company_id != count_line.company_id:
                         continue
-                    mode = count_line.count_id.lock_mode
+                    mode = count_line._lock_mode()
                     if mode == "block":
                         blocked.append((ml, count_line))
                     elif mode == "warn":
