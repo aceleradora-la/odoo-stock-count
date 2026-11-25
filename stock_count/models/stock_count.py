@@ -1,6 +1,6 @@
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError
-from odoo.tools import float_compare
+from odoo.tools import float_compare, float_is_zero
 from odoo.tools.misc import formatLang
 
 from .res_company import LOCK_MODES
@@ -504,9 +504,18 @@ class StockCount(models.Model):
         return vals_list
 
     def _prepare_line_vals_list(self):
-        """Una línea por quant del alcance más, si corresponde, líneas en cero."""
+        """Una línea por quant con stock del alcance más, si corresponde, líneas en cero.
+
+        Odoo conserva los quants que quedaron en cero hasta que se limpian (al abrir el
+        informe de existencias): no generan línea por sí solos, valen como 'en cero'."""
         self.ensure_one()
-        quants = self._get_quants()
+        quants = self._get_quants().filtered(
+            lambda quant: (
+                not float_is_zero(
+                    quant.quantity, precision_rounding=quant.product_uom_id.rounding or 0.01
+                )
+            )
+        )
         vals_list = [self._prepare_line_vals_from_quant(quant) for quant in quants]
         if self.include_zero_quants:
             vals_list += self._prepare_zero_lines_vals_list(quants)
