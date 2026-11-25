@@ -95,8 +95,9 @@ class StockCount(models.Model):
     )
     include_zero_quants = fields.Boolean(
         string="Incluir stock en cero",
-        help="Genera líneas para productos del alcance sin stock en la ubicación, "
-        "para confirmar que efectivamente no hay nada.",
+        help="Agrega líneas en cero para los productos del alcance que no tienen stock "
+        "en la ubicación y tuvieron movimientos ahí desde su último recuento, para "
+        "confirmar que efectivamente no hay nada.",
     )
 
     user_id = fields.Many2one(
@@ -395,23 +396,120 @@ class StockCount(models.Model):
             "qty_theoretical": 0.0,
         }
 
+    def _zero_last_moves(self, locations):
+        """Último movimiento hecho de cada (producto, ubicación, lote) del alcance.
+
+        Los ajustes que generan los recuentos no cuentan como movimiento. Los productos
+        con número de serie quedan afuera: una serie que salió no se confirma en cero."""
+        self.ensure_one()
+        domain = [
+            ("state", "=", "done"),
+            ("company_id", "=", self.company_id.id),
+            ("move_id.count_id", "=", False),
+            ("product_id.is_storable", "=", True),
+            ("product_id.tracking", "!=", "serial"),
+        ]
+        if self.scope != "all":
+            domain.append(("product_id", "in", self._get_scope_products().ids))
+        if self.scope == "lots":
+            domain.append(("lot_id", "in", self.lot_ids.ids))
+        MoveLine = self.env["stock.move.line"].sudo()
+        last_moves = {}
+        for field in ("location_id", "location_dest_id"):
+            groups = MoveLine._read_group(
+                domain + [(field, "in", locations.ids)],
+                ["product_id", field, "lot_id"],
+                ["date:max"],
+            )
+            for product, location, lot, date in groups:
+                tracked = product.tracking == "lot"
+                if tracked and not lot:
+                    continue
+                key = (product.id, location.id, lot.id if tracked else False)
+                if not last_moves.get(key) or date > last_moves[key]:
+                    last_moves[key] = date
+        return last_moves
+
+    def _zero_last_counts(self, locations, product_ids):
+        """Cierre del último recuento validado de cada (producto, ubicación, lote), y de
+        cada ubicación contada entera (alcance 'todos los productos')."""
+        self.ensure_one()
+        by_key = {}
+        groups = (
+            self.env["stock.count.line"]
+            .sudo()
+            ._read_group(
+                [
+                    ("state", "=", "applied"),
+                    ("location_id", "in", locations.ids),
+                    ("product_id", "in", list(product_ids)),
+                ],
+                ["product_id", "location_id", "lot_id"],
+                ["count_id:recordset"],
+            )
+        )
+        for product, location, lot, counts in groups:
+            dates = [date for date in counts.mapped("date_end") if date]
+            if dates:
+                by_key[(product.id, location.id, lot.id)] = max(dates)
+        by_location = {}
+        pending = set(locations.ids)
+        full_counts = self.sudo().search(
+            [
+                ("state", "=", "done"),
+                ("scope", "=", "all"),
+                ("company_id", "=", self.company_id.id),
+                ("date_end", "!=", False),
+            ],
+            order="date_end desc",
+        )
+        for count in full_counts:
+            if not pending:
+                break
+            for location_id in pending & set(count._get_count_locations().ids):
+                by_location[location_id] = count.date_end
+                pending.discard(location_id)
+        return by_key, by_location
+
+    def _prepare_zero_lines_vals_list(self, quants):
+        """Líneas en cero: lo que no tiene stock en la ubicación y se movió ahí desde su
+        último recuento. Lo que nunca se contó entra con cualquier movimiento."""
+        self.ensure_one()
+        existing = {(q.product_id.id, q.location_id.id, q.lot_id.id) for q in quants}
+        stocked = {(q.product_id.id, q.location_id.id) for q in quants}
+        locations = self._get_count_locations()
+        last_moves = {
+            key: date
+            for key, date in self._zero_last_moves(locations).items()
+            if key not in existing and (key[2] or key[:2] not in stocked)
+        }
+        if not last_moves:
+            return []
+        by_key, by_location = self._zero_last_counts(locations, {key[0] for key in last_moves})
+        vals_list = []
+        for key in sorted(last_moves):
+            product_id, location_id, lot_id = key
+            counted = [date for date in (by_key.get(key), by_location.get(location_id)) if date]
+            if counted and last_moves[key] <= max(counted):
+                continue
+            vals_list.append(
+                {
+                    "count_id": self.id,
+                    "product_id": product_id,
+                    "location_id": location_id,
+                    "lot_id": lot_id,
+                    "qty_theoretical": 0.0,
+                }
+            )
+        return vals_list
+
     def _prepare_line_vals_list(self):
         """Una línea por quant del alcance más, si corresponde, líneas en cero."""
         self.ensure_one()
         quants = self._get_quants()
         vals_list = [self._prepare_line_vals_from_quant(quant) for quant in quants]
-        if self.include_zero_quants and self.scope != "all":
-            existing = {(q.product_id.id, q.location_id.id, q.lot_id.id) for q in quants}
-            locations = self._get_count_locations()
-            if self.scope == "lots":
-                keys = [(lot.product_id, lot) for lot in self.lot_ids]
-            else:
-                keys = [(product, None) for product in self._get_scope_products()]
-            for product, lot in keys:
-                for location in locations:
-                    key = (product.id, location.id, lot.id if lot else False)
-                    if key not in existing:
-                        vals_list.append(self._prepare_zero_line_vals(product, location, lot))
+        if self.include_zero_quants:
+            vals_list += self._prepare_zero_lines_vals_list(quants)
         return vals_list
 
     # ------------------------------------------------------------------
@@ -488,8 +586,9 @@ class StockCount(models.Model):
             if not vals_list:
                 raise UserError(
                     self.env._(
-                        "No hay stock en las ubicaciones elegidas para el alcance definido. "
-                        "Si querés confirmar que están vacías, activá 'Incluir stock en cero'."
+                        "No hay nada para contar en las ubicaciones elegidas con el alcance "
+                        "definido. 'Incluir stock en cero' agrega lo que quedó en cero y se "
+                        "movió desde su último recuento."
                     )
                 )
             count._check_no_overlapping_count(vals_list)

@@ -1,6 +1,8 @@
 from odoo.exceptions import UserError
 from odoo.tests import TransactionCase, tagged
 
+from .common import pass_through
+
 
 @tagged("post_install", "-at_install")
 class TestStockCountFlow(TransactionCase):
@@ -144,6 +146,9 @@ class TestStockCountFlow(TransactionCase):
         with self.assertRaises(UserError):
             count.action_confirm()
         count.include_zero_quants = True
+        with self.assertRaises(UserError, msg="en cero y sin movimientos: no entra"):
+            count.action_confirm()
+        pass_through(self.env, self.tape, self.shelf)
         count.action_confirm()
         line = count.line_ids
         self.assertEqual(len(line), 1)
@@ -334,6 +339,7 @@ class TestStockCountFlow(TransactionCase):
         self.assertEqual(self._line(count, self.screw).state, "applied", "aprobada y validada")
 
     def test_tolerance_100_approves_everything_including_zero_theoretical(self):
+        pass_through(self.env, self.tape, self.shelf)
         count = self._create_count(
             scope="products",
             product_ids=[(6, 0, (self.screw | self.tape).ids)],
@@ -437,6 +443,7 @@ class TestStockCountFlow(TransactionCase):
         self.assertEqual(len(count.move_ids), 1)
 
     def test_zero_line_creates_quant_and_move(self):
+        pass_through(self.env, self.tape, self.shelf)
         count = self._create_count(
             scope="products", product_ids=[(6, 0, self.tape.ids)], include_zero_quants=True
         )
