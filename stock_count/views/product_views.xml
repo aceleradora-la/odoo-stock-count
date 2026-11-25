@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_form_view_stock_count" model="ir.ui.view">
+        <field name="name">product.template.form.stock_count</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='inventory']" position="inside">
+                <group name="stock_count" string="Recuento de inventario">
+                    <group>
+                        <field name="uom_ids" invisible="1"/>
+                        <field name="stock_count_pack_id" options="{'no_create': True}" placeholder="Unidad de medida del producto"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="product_template_list_view_stock_count" model="ir.ui.view">
+        <field name="name">product.template.list.stock_count</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="uom_ids" column_invisible="1"/>
+                <field name="stock_count_pack_id" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

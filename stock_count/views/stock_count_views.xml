@@ -84,7 +84,10 @@
                                     <field name="product_id" readonly="1"/>
                                     <field name="lot_id" optional="show" readonly="1"/>
                                     <field name="product_uom_id" optional="show" readonly="1"/>
+                                    <field name="count_pack_id" optional="hide" readonly="1"/>
                                     <field name="qty_theoretical" invisible="blind and not parent.is_manager"/>
+                                    <field name="theoretical_breakdown" optional="hide" invisible="blind and not parent.is_manager"/>
+                                    <field name="counted_breakdown" optional="show"/>
                                     <field name="qty_counted" readonly="state not in ('pending', 'counted') or parent.state not in ('ready', 'counting', 'review')"/>
                                     <field name="counted_by_id" optional="show" readonly="1"/>
                                     <field name="qty_recount" readonly="state != 'recount'" column_invisible="not parent.has_recount"/>
