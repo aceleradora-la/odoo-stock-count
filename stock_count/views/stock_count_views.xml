@@ -39,6 +39,7 @@
                             <field name="is_manager" invisible="1"/>
                             <field name="has_recount" invisible="1"/>
                             <field name="warehouse_id" readonly="state != 'draft'"/>
+                            <field name="picking_type_id" invisible="1"/>
                             <field name="location_ids" widget="many2many_tags" readonly="state != 'draft'" options="{'no_create': True}"/>
                             <field name="include_children" readonly="state != 'draft'"/>
                             <field name="scope" readonly="state != 'draft'"/>
@@ -173,6 +174,8 @@
                 <separator/>
                 <filter name="draft" string="Borrador" domain="[('state', '=', 'draft')]"/>
                 <filter name="active" string="Activos" domain="[('state', 'in', ('ready', 'counting', 'review'))]"/>
+                <filter name="to_count" string="Por contar" domain="[('state', 'in', ('ready', 'counting'))]"/>
+                <filter name="review" string="En revisión" domain="[('state', '=', 'review')]"/>
                 <filter name="done" string="Validados" domain="[('state', '=', 'done')]"/>
                 <separator/>
                 <filter name="date_planned" string="Fecha planificada" date="date_planned"/>
@@ -180,6 +183,7 @@
                     <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
                     <filter name="group_user" string="Supervisor" context="{'group_by': 'user_id'}"/>
                     <filter name="group_warehouse" string="Depósito" context="{'group_by': 'warehouse_id'}"/>
+                    <filter name="group_picking_type" string="Tipo de operación" context="{'group_by': 'picking_type_id'}"/>
                     <filter name="group_month" string="Mes" context="{'group_by': 'date_planned:month'}"/>
                 </group>
             </search>
@@ -194,7 +198,7 @@
         <field name="context">{'search_default_active': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Creá el primer recuento</p>
-            <p>Elegí ubicaciones y productos, asigná contadores y confirmá: el stock teórico se congela y queda bloqueado hasta validar.</p>
+            <p>Elegí ubicaciones y productos, asigná contadores y confirmá. Al iniciar el conteo, el stock teórico se congela y queda bloqueado hasta validar.</p>
         </field>
     </record>
 </odoo>

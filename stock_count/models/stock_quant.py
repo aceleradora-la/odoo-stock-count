@@ -57,6 +57,9 @@ class StockQuant(models.Model):
         )
         if ctx.get("stock_count_id"):
             vals["count_id"] = ctx["stock_count_id"]
+            picking_type = self.env["stock.count"].sudo().browse(vals["count_id"]).picking_type_id
+            if picking_type:
+                vals["picking_type_id"] = picking_type.id
         line_id = (ctx.get("stock_count_line_by_quant") or {}).get(self.id)
         if line_id:
             for command in vals.get("move_line_ids", []):

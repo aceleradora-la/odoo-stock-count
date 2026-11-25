@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tarjeta "Recuentos" en el tablero de Inventario -->
+    <record id="stock_picking_type_kanban_stock_count" model="ir.ui.view">
+        <field name="name">stock.picking.type.kanban.stock_count</field>
+        <field name="model">stock.picking.type</field>
+        <field name="inherit_id" ref="stock.stock_picking_type_kanban"/>
+        <field name="arch" type="xml">
+            <xpath expr="//t[@t-name='menu']" position="inside">
+                <div class="container" t-if="record.code.raw_value == 'stock_count'">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 role="menuitem" class="o_kanban_card_manage_title">
+                                <span>Ver</span>
+                            </h5>
+                            <div role="menuitem">
+                                <a name="get_stock_count_action" type="object">Todos</a>
+                            </div>
+                            <div role="menuitem">
+                                <a name="get_stock_count_action" type="object" context="{'search_default_active': 1}">Activos</a>
+                            </div>
+                            <div role="menuitem">
+                                <a name="get_stock_count_action" type="object" context="{'search_default_done': 1}">Validados</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div t-if="widget.editable" class="o_kanban_card_manage_settings row">
+                        <div class="col-8" role="menuitem" aria-haspopup="true">
+                            <field name="color" widget="kanban_color_picker"/>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+            <xpath expr="//div[@name='stock_picking']" position="after">
+                <div t-if="record.code.raw_value == 'stock_count'" name="stock_count" class="px-2">
+                    <a t-if="!selection_mode" type="object" name="get_stock_count_action" context="{'search_default_active': 1}">
+                        <field name="name" class="fw-bold fs-4"/>
+                    </a>
+                    <field t-if="selection_mode" name="name" class="fw-bold fs-4"/>
+                    <field class="d-block" name="warehouse_id" groups="stock.group_stock_multi_warehouses"/>
+                    <div t-if="!selection_mode" class="row mt-3">
+                        <div class="col-6">
+                            <button class="btn btn-primary" name="get_stock_count_action" type="object" context="{'search_default_to_count': 1}">
+                                <span t-if="record.count_stock_count_to_count.raw_value > 0">
+                                    <field name="count_stock_count_to_count"/> por contar
+                                </span>
+                                <span t-else="">Abrir</span>
+                            </button>
+                        </div>
+                        <div class="col-6 stock-overview-links">
+                            <div t-if="record.count_stock_count_review.raw_value > 0" class="row">
+                                <a class="col-8 offset-4 text-truncate" name="get_stock_count_action" type="object" context="{'search_default_review': 1}">
+                                    <div class="row">
+                                        <span class="col-6">En revisión</span>
+                                        <field class="col-2 text-end" name="count_stock_count_review"/>
+                                    </div>
+                                </a>
+                            </div>
+                            <div t-if="record.count_stock_count_draft.raw_value > 0" class="row">
+                                <a class="col-8 offset-4 text-truncate" name="get_stock_count_action" type="object" context="{'search_default_draft': 1}">
+                                    <div class="row">
+                                        <span class="col-6">Borrador</span>
+                                        <field class="col-2 text-end" name="count_stock_count_draft"/>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Historial de movimientos: filtro de los ajustes que salieron de un recuento -->
+    <record id="stock_move_line_view_search_stock_count" model="ir.ui.view">
+        <field name="name">stock.move.line.search.stock_count</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.stock_move_line_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <filter name="stock_count" string="Ajustes de recuentos" domain="[('move_id.count_id', '!=', False)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
