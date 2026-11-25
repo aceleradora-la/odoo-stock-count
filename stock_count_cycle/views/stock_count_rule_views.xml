@@ -6,7 +6,7 @@
         <field name="arch" type="xml">
             <form string="Regla de conteo cíclico">
                 <header>
-                    <button name="action_run_now" type="object" string="Generar ahora" class="btn-primary" invisible="rule_type == 'zero'" help="Evalúa la regla hoy y crea el recuento si corresponde."/>
+                    <button name="action_run_now" type="object" string="Generar ahora" class="btn-primary" invisible="rule_type == 'zero'" help="Periódico: crea el recuento ahora, sin esperar a la fecha de Próximo recuento. Rotación y precisión: evalúa la condición hoy."/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">

@@ -26,7 +26,8 @@ Menú: Inventario › Configuración › **Reglas de conteo cíclico**.
 - **No repetir antes de (días)**: en rotación, precisión y cero, tiempo mínimo entre dos
   recuentos de la misma ubicación.
 
-Una regla no crea un recuento si ya tiene uno activo sobre la misma ubicación.
+Las reglas de rotación, precisión y cero no crean un recuento si ya tienen uno activo
+sobre la misma ubicación.
 
 ## Qué recibe el supervisor
 
@@ -38,4 +39,7 @@ fecha planificada. La regla muestra sus recuentos generados y la última ejecuci
 - La acción planificada diaria *Recuento cíclico: generar recuentos* evalúa las reglas
   periódicas, de rotación y de precisión.
 - La confirmación de cero se evalúa al validar cada movimiento.
-- El botón **Generar ahora** evalúa la regla en el momento.
+- El botón **Generar ahora** crea el recuento de una regla periódica en el momento, sin
+  esperar a la fecha de *Próximo recuento* (el siguiente se programa desde hoy). Si la
+  regla ya tiene un recuento abierto, lo muestra en lugar de crear otro. En rotación y
+  precisión, evalúa la condición hoy.
