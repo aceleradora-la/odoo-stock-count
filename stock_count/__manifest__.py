@@ -1,7 +1,7 @@
 {
     "name": "Recuento de inventario",
-    "summary": "Recuento físico como transacción: snapshot, bloqueo de movimientos, "
-    "contadores, reconteo y trazabilidad de los ajustes",
+    "summary": "Recuentos físicos con conteo desde el celular, reconteo, aprobación "
+    "y ajuste de inventario",
     "version": "18.0.8.0.0",
     "category": "Inventory/Inventory",
     "author": "aceleradora.la",
@@ -38,7 +38,7 @@
             "stock_count/static/tests/tours/**/*",
         ],
     },
-    "images": ["static/description/icon.svg"],
+    "images": ["static/description/banner.png"],
     "installable": True,
     "application": True,
     "auto_install": False,

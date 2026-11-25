@@ -1,147 +1,158 @@
-# stock_count · Recuento de inventario
+# Recuento de inventario (`stock_count`)
 
-Recuento físico como transacción. Ver el [README del repositorio](../README.md) para
-la descripción funcional completa y el plan de fases.
+Recuentos físicos de inventario como documento, con app para contar y supervisar desde el
+celular. Vista general e instalación en el [README del repositorio](../README.md).
 
-## Estado: fase 4 (núcleo, bloqueo, contador móvil, conteo ciego y reportes)
+## Menús
 
-Flujo completo operativo:
+| Menú | Para qué |
+|---|---|
+| App **Recuentos** (menú principal) | Contar y supervisar desde el celular o el escritorio |
+| Inventario › Operaciones › Recuentos › **Recuentos** | Crear, confirmar, revisar y validar recuentos |
+| Inventario › Operaciones › Recuentos › **Contar** | La misma app, desde Inventario |
+| Inventario › Operaciones › Recuentos › **Mis líneas de conteo** | Lista de las líneas del usuario, para cargar desde el escritorio |
+| Inventario › Informes › **Análisis de recuentos** | Diferencias de los recuentos validados |
+| Inventario › Configuración › **Motivos de diferencia** | Motivos que se asignan a las diferencias |
 
-- **Confirmar**: genera una línea por quant del alcance (ubicaciones con o sin hijas;
-  todos los productos, lista, categoría o lotes; opcionalmente líneas en cero) con la
-  cantidad teórica congelada, toma los quants (`count_line_id`) y valida que no haya otro
-  recuento activo sobre la misma clave producto / ubicación / lote.
-- **Iniciar conteo**: los contadores cargan el primer conteo; el sistema registra quién y
-  cuándo. Solo el asignado o el supervisor pueden cargar una línea asignada.
-- **Enviar a revisión**: aprueba solas las líneas dentro de la tolerancia y manda a
-  reconteo las que superan el umbral (porcentaje o unidades). El segundo conteo manda.
-- **Revisión**: aprobar, pedir reconteo, omitir, asignar motivo, línea a línea o en bloque.
-- **Aplicar**: detecta líneas cuyo quant ya no coincide con el teórico congelado
-  ("movidas durante el conteo") y exige decisión explícita; genera los ajustes con
-  `stock.quant._apply_inventory`, con el nombre del recuento como referencia, enlazados
-  al recuento (`stock.move.count_id`) y a la línea (`stock.move.line.count_line_id`).
-  Si el motivo tiene ubicación de destino, la pérdida va ahí (por ejemplo Scrap).
-- **Cancelar / Volver a borrador**: liberan los quants sin generar ajustes.
+## Usuarios
 
-Base de la fase 0: modelos con todos los campos del diseño, configuración por compañía
-(conteo ciego, modo de bloqueo, umbrales), grupos **Contador** y **Supervisor** con reglas
-de registro, secuencia `RC/AAAA/00001`, motivos de diferencia, menús y vistas.
+- **Contador.** Ve los recuentos donde figura como contador y carga cantidades, motivo y
+  comentario en sus líneas.
+- **Supervisor.** Crea, confirma, reparte, revisa, aprueba y valida recuentos. Incluye
+  Inventario / Usuario. Inventario / Administrador incluye Supervisor.
 
-### Bloqueo de movimientos (fase 2)
+## Crear y confirmar
 
-Desde que el recuento se confirma hasta que se aplica o cancela, el par producto +
-ubicación (+ lote) de cada línea queda protegido según el modo del recuento:
+En el recuento se define:
 
-- **Bloquear**: `stock.move._action_done` rechaza la validación con un mensaje que dice
-  producto, ubicación, recuento y supervisor. Cubre transferencias, fabricación, punto de
-  venta, desecho y ajustes manuales. La **reserva sigue permitida**.
-- **Avisar**: el movimiento pasa, la línea queda marcada como "movida durante el conteo"
-  y el chatter del recuento registra qué movimiento fue. Al aplicar, el supervisor decide.
-- **Sin control**: nada en tiempo real; al aplicar se detecta igual si el quant cambió.
+- **Depósito y ubicaciones**, con o sin sub-ubicaciones.
+- **Alcance**: todos los productos, productos seleccionados, una categoría o lotes /
+  números de serie. *Incluir stock en cero* agrega líneas para productos del alcance que
+  no tienen stock en la ubicación.
+- **Supervisor y contadores.**
+- **Bloqueo de movimientos**, umbrales de reconteo, tolerancia de aprobación y *Reconteo
+  inmediato*. Toman por defecto los valores de los ajustes de Inventario.
 
-Además, el botón Aplicar de Inventario físico nativo (y el borrado de quants) se rechaza
-sobre quants tomados por un recuento: el ajuste sale del recuento, no de la pantalla de
-quants. La lista de quants muestra la columna "En recuento".
+**Confirmar** genera una línea por producto, ubicación, lote, paquete y propietario con la
+cantidad del sistema de ese momento. No se puede confirmar si otro recuento activo ya
+cubre el mismo producto en la misma ubicación.
 
-Los ajustes generados por el propio recuento llevan `count_id` y pasan el bloqueo.
+**Repartir líneas** asigna las líneas a los contadores: por ubicación (cada ubicación
+entera a un contador, balanceando la carga) o línea por línea. Una línea asignada solo la
+carga su contador o el supervisor; una sin asignar, cualquier contador del recuento.
 
-### Roles y vista móvil (fase 3)
+## Bloqueo de movimientos
 
-- **Contar** (Inventario › Operaciones › Recuentos › Contar): vista móvil OWL con las
-  ubicaciones del contador y su avance, líneas con cantidad grande y +1, escaneo de
-  ubicación o producto (lector físico o cámara: escanear un producto suma una unidad),
-  "Siguiente ubicación" y "Producto no esperado". Funciona en Community.
-- **Conteo ciego forzado por el ORM**: para el grupo Contador, teórico, actual,
-  diferencia y valor se devuelven en cero en toda lectura; export, filtro y agrupación por
-  esos campos se rechazan; una regla oculta los quants tomados por un recuento ciego. El
-  contador solo puede escribir cantidades, motivo y comentario.
-- **Repartir líneas**: por ubicación (cada ubicación entera a un solo contador,
-  balanceando carga) o línea a línea; por defecto no toca lo asignado ni lo contado.
-- **Producto no esperado**: desde el formulario o el móvil. Si el sistema tenía stock del
-  producto (fuera del alcance), el teórico toma la cantidad del quant.
+Desde la confirmación hasta la validación o cancelación, cada producto en su ubicación
+(y lote) queda controlado según el modo del recuento:
 
-### Reportes (fase 4)
+| Modo | Al validar un movimiento del producto en esa ubicación |
+|---|---|
+| Bloquear la validación | Se rechaza, con un mensaje que indica producto, ubicación, recuento y supervisor. Aplica a transferencias, fabricación, punto de venta, desechos y ajustes manuales. La reserva sigue permitida |
+| Avisar y marcar la línea | El movimiento pasa, la línea queda marcada como *Movido durante el conteo* y el recuento lo registra en su historial |
+| Sin control | El movimiento pasa. Al validar el recuento se detecta igual si el stock cambió |
 
-- **Hoja de conteo (PDF)**: por contador y ubicación, con código de barras de recuento,
-  ubicación y producto, columna en blanco para anotar y firmas. Nunca muestra el teórico.
-- **Informe de diferencias (PDF)**: solo supervisores. Líneas con diferencia ordenadas por
-  valor, teórico / primer / segundo conteo, porcentaje, valor, motivo, quién contó,
-  totales de sobrantes y faltantes, firmas.
-- **Exportar Excel**: el mismo informe con todas las líneas, como adjunto descargable del
-  recuento (requiere `xlsxwriter`, que Odoo ya trae).
-- **Análisis de recuentos** (Inventario › Informes): pivot y gráfico sobre las líneas de
-  recuentos aplicados, por ubicación, depósito, producto, categoría, motivo, contador y
-  mes. Medidas: diferencia en unidades y en valor.
-- **Ubicación**: recuentos aplicados, fecha del último y precisión promedio de los
-  últimos cinco, con acceso a la lista de recuentos.
+Los productos en recuento no se pueden ajustar desde Inventario físico: el ajuste sale del
+recuento. La lista de Inventario físico muestra la columna *En recuento*.
 
-Lo que viene: retroport a 18.0 y 17.0, puente con Código de barras de Enterprise (fase 6)
-y reglas de conteo cíclico que crean recuentos solos y asignan la tarea (fase 7).
+## Contar con la app
 
-### Conteo en embalajes
+1. **Contar** muestra los recuentos del usuario con su avance.
+2. Al abrir un recuento aparece una tarjeta por ubicación: pendiente, en curso o terminada.
+3. La ubicación se abre tocando su tarjeta o escaneando su código.
+4. En cada renglón se escribe la cantidad. Enter pasa al siguiente. **+1** suma una unidad.
+5. **Terminar** cierra la ubicación; **Terminar conteo**, el recuento. Si quedan productos
+   sin cantidad, la app avisa y, al confirmar, los registra en 0.
 
-Un producto puede contarse en un embalaje (caja, pack, bobina) en lugar de su unidad de
-medida. El contador carga **embalajes + sueltas** y el recuento sigue trabajando en la
-unidad base: diferencias, tolerancias, bloqueo y ajustes no cambian.
+Funciones de la pantalla de conteo:
 
-- **Configuración.** Odoo 19: campo *Unidad de recuento* en la pestaña Inventario del
-  producto, entre sus Embalajes. Odoo 18: columna *Recuento* en la lista de embalajes del
-  producto, uno por producto. Sin configurar, se cuenta en la unidad de medida.
-- **Snapshot.** Al confirmar, cada línea guarda su unidad de recuento y el factor.
-- **App.** Dos casilleros por renglón y el total en la unidad base. El contador puede
-  cambiar la unidad del renglón entre la unidad del producto y sus embalajes; lo ya
-  cargado se conserva. El segundo conteo tiene sus propios casilleros.
-- **Escaneo.** El código de barras de un embalaje suma un embalaje; el del producto, una
-  unidad.
-- **Reportes.** Hoja de conteo, informe de diferencias, Excel y listas muestran el
-  desglose. El desglose del teórico queda oculto en conteo ciego.
+- **Escaneo** con lector físico, cámara o código escrito. Un producto escaneado suma una
+  unidad en la ubicación abierta; el código de un embalaje suma un embalaje. Lee códigos
+  GS1 con producto, lote y cantidad, y los códigos con peso de la nomenclatura clásica.
+- **Producto no esperado.** Si el producto escaneado no figura en la ubicación abierta, la
+  app ofrece agregarlo. También se agrega con el botón *Producto*.
+- **Buscador y filtro Pendientes** en ubicaciones con más de seis productos: por nombre,
+  código, código de barras, lote o paquete.
+- **Números de serie.** Valen 0 o 1; escanear dos veces el mismo no suma.
+- **Segundo conteo.** Los renglones a recontar aparecen marcados *2° conteo* y vacíos.
+- **Sin conexión.** Cada cantidad se guarda en el teléfono y se envía en orden cuando hay
+  señal. Una franja indica cuántas faltan enviar. Terminar, agregar productos, cambiar la
+  unidad y supervisar necesitan conexión. La app debe abrirse con señal al menos una vez
+  antes de entrar a una zona sin cobertura.
+- **Instalar en el celular.** Botón en la pantalla de inicio de la app: queda con su ícono
+  y abre directo en Recuentos.
 
-### App Recuentos: sin conexión, buscador, reconteo inmediato y supervisor
+También se puede contar desde *Mis líneas de conteo*, desde las líneas del recuento o
+sobre la **hoja de conteo** impresa.
 
-- **Sin conexión.** Cada cantidad se guarda primero en el teléfono (IndexedDB), se ve
-  aplicada en pantalla y viaja al servidor en orden cuando hay señal. Una franja avisa
-  cuántas cantidades faltan enviar y cada renglón pendiente lleva la marca *sin enviar*.
-  La última copia de los recuentos queda guardada: se puede entrar a una zona sin wifi y
-  seguir contando, incluso si la app se recarga. Lo que necesita al servidor (terminar,
-  producto no esperado, cambiar la unidad, supervisar) espera a que la cola se vacíe.
-  Límite: hay que abrir la app con señal al menos una vez antes de entrar al depósito.
-- **Buscador.** En ubicaciones con más de seis productos aparece un buscador por nombre,
-  código, código de barras, lote o paquete, y el filtro *Pendientes*.
-- **Lector físico.** Si el lector escribe el código dentro de un casillero de cantidad o
-  del buscador, la app lo reconoce como escaneo (ráfaga de teclas + Enter o Tab) y no lo
-  guarda como cantidad.
-- **Reconteo inmediato** (Ajustes de Inventario, apagado por defecto; se puede cambiar en
-  cada recuento). Si el primer conteo supera el umbral de reconteo, la app pide contar de
-  nuevo en el momento, sin decir cuánto espera el sistema. Evita la segunda vuelta al
-  depósito. Lo contado sumando de a uno (escaneo, +1) se evalúa al terminar la ubicación.
-- **Supervisar.** Tarjeta visible solo para supervisores: recuentos en curso, avance por
-  contador, líneas para resolver ordenadas por valor (sistema, contado, diferencia, quién
-  contó) con *Aprobar*, *Recontar* y *Aceptar 1er conteo*, aprobación en bloque y
-  *Validar*. Usa `stock.count.supervisor_get_data` y `supervisor_action`.
+## Conteo en embalajes
 
-### Reglas de seguridad de la carga
+Un producto se puede contar en un embalaje (caja, pack, bobina). El contador carga
+**embalajes + sueltas** y el recuento calcula el total en la unidad del producto.
 
-- Un producto escaneado se cuenta solo en la ubicación abierta. Si ahí no se lo esperaba,
-  la app ofrece agregarlo como producto no esperado.
-- *Terminar conteo* no cierra en cero las líneas sin asignar de ubicaciones donde el
-  contador no contó nada, y lo cerrado en cero nunca se aprueba solo.
-- Un número de serie vale 0 o 1; escanearlo dos veces no suma.
-- El valor de la diferencia usa el costo guardado en la línea, congelado al validar.
-- *No recontar si el valor es menor a*: materialidad para no recontar diferencias baratas.
+- **Odoo 19:** campo *Unidad de recuento* en la pestaña Inventario del producto, entre sus
+  embalajes.
+- **Odoo 18:** columna *Recuento* en los embalajes del producto, uno por producto.
+- En la app, el contador puede cambiar la unidad de cada renglón entre la unidad del
+  producto y sus embalajes. Lo ya cargado se conserva.
+- La hoja de conteo, el informe de diferencias y el Excel muestran el desglose.
 
-## Notas de compatibilidad 19.0
+## Reconteo y aprobación
 
-Verificado sobre `odoo/odoo` rama 19.0 (`addons/stock/models/stock_quant.py`):
+Cuando se carga la última línea, el recuento pasa a **En revisión** y clasifica cada línea:
 
-- `_apply_inventory(self, date=None)` ahora acepta fecha. En 17.0 y 18.0 no lleva
-  parámetros.
-- El contexto `inventory_name` en 17.0 y 18.0 pone el `name` del movimiento; en 19.0 lo
-  guarda en el campo nuevo `inventory_name` del `stock.move`.
-- Los grupos ya no llevan `category_id`: se agrupan por `res.groups.privilege`. En
-  `res.users`, `groups_id` pasó a `group_ids` / `all_group_ids`.
-- En las vistas de búsqueda, el `<group>` de "Agrupar por" ya no acepta `expand` ni `string`.
-- El modelo de paquetes pasó de `stock.quant.package` a `stock.package`.
-- Los dominios pueden llegar como objetos `Domain`; se recorren con `iter_conditions()`.
-- `action_apply_inventory` abre el asistente `stock.inventory.conflict` si el quant está
-  `is_outdated`. Nuestro flujo llama a `_apply_inventory` directamente y resuelve el
-  conflicto con la lógica propia de "movido durante el conteo".
+| Diferencia | Resultado |
+|---|---|
+| Sin diferencia o dentro de *Aprobar automáticamente hasta (%)* | Aprobada |
+| Supera *Reconteo si la diferencia supera* (% o unidades) | Reconteo: vuelve al contador |
+| Entre ambos valores | Contada: espera al supervisor |
+
+- Una diferencia cuyo valor es menor a *No recontar si el valor de la diferencia es menor
+  a* no va a reconteo.
+- Las líneas cerradas en 0 por *Terminar* nunca se aprueban solas.
+- Tras el segundo conteo, la línea se aprueba si quedó dentro de la tolerancia; si no,
+  espera al supervisor.
+- Con **Reconteo inmediato**, el reconteo se pide en el momento de cargar la cantidad, sin
+  esperar a que termine el conteo. Lo contado de a una unidad (escaneo, +1) se evalúa al
+  terminar la ubicación.
+
+Acciones del supervisor, por línea o en bloque: **Aprobar**, **Pedir reconteo**, **Aceptar
+1er conteo**, **Omitir**, asignar **motivo**. Desde la app, la tarjeta **Supervisar**
+muestra el avance por contador y las líneas para resolver, ordenadas por valor.
+
+## Validar
+
+Con todas las líneas aprobadas u omitidas el recuento se valida solo; también con el botón
+**Validar**.
+
+- Genera los ajustes de inventario con el nombre del recuento como referencia. Los
+  movimientos quedan enlazados al recuento y a la línea.
+- Si el motivo de la diferencia tiene *Ubicación de destino*, el faltante va a esa
+  ubicación (por ejemplo, Desechos).
+- Si el stock de una línea cambió después de la confirmación, el recuento no se valida:
+  marca la línea y el supervisor decide con **Validar igualmente**.
+- El valor de la diferencia usa el costo del producto al momento de validar.
+
+**Cancelar** y **Volver a borrador** liberan los productos sin generar ajustes.
+
+## Conteo ciego
+
+Con *Conteo ciego* activo en los ajustes de Inventario, el contador no ve la cantidad del
+sistema, la diferencia ni su valor en ninguna pantalla, exportación, filtro o agrupación,
+ni el stock de los productos en recuento. El supervisor ve todo.
+
+## Reportes
+
+| Reporte | Contenido |
+|---|---|
+| Hoja de conteo (PDF) | Por contador y ubicación, con códigos de barras y columna para anotar. No muestra la cantidad del sistema |
+| Informe de diferencias (PDF) | Líneas con diferencia ordenadas por valor: sistema, primer y segundo conteo, porcentaje, valor, motivo y contador |
+| Exportar Excel | Todas las líneas del recuento |
+| Análisis de recuentos | Tabla dinámica y gráfico por ubicación, depósito, producto, categoría, motivo, contador y mes |
+| Ubicación | Recuentos validados, fecha del último y precisión de los últimos cinco |
+
+## Datos técnicos
+
+- Modelos: `stock.count`, `stock.count.line`, `stock.count.reason`.
+- Dependencias: `stock`, `mail`, `barcodes`. Python: `xlsxwriter`.
+- Tests: `odoo -d <base> -i stock_count --test-enable --test-tags /stock_count --stop-after-init`.
