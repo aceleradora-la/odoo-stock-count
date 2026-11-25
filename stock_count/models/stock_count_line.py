@@ -1022,8 +1022,35 @@ class StockCountLine(models.Model):
         if not self.env.user.has_group("stock_count.group_stock_count_manager"):
             raise UserError(self.env._("Solo el supervisor puede hacer esta acción."))
 
+    def _self_counted(self, first_count=False):
+        """Líneas cuyo conteo cargó el usuario actual, cuando la compañía no deja que un
+        supervisor apruebe lo que contó. Vale el conteo vigente: el segundo si lo hubo;
+        con `first_count`, el primero."""
+        user = self.env.user
+
+        def counted_by(line):
+            if first_count or not line.recounted_at:
+                return line.counted_by_id
+            return line.recounted_by_id
+
+        return self.filtered(
+            lambda line: line.company_id.stock_count_no_self_approval and counted_by(line) == user
+        )
+
+    def _check_not_self_counted(self, first_count=False):
+        own = self._self_counted(first_count=first_count)
+        if own:
+            raise UserError(
+                self.env._(
+                    "No podés aprobar lo que contaste vos (%s). Lo tiene que resolver otro "
+                    "supervisor.",
+                    ", ".join(own[:5].mapped("product_id.display_name")),
+                )
+            )
+
     def action_approve(self):
         self._check_manager()
+        self._check_not_self_counted()
         for line in self:
             if line.state != "counted":
                 raise UserError(
@@ -1050,6 +1077,7 @@ class StockCountLine(models.Model):
                         line.product_id.display_name,
                     )
                 )
+        self._check_not_self_counted(first_count=True)
         self.write(
             {
                 "state": "approved",

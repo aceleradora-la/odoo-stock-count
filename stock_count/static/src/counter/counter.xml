@@ -350,12 +350,13 @@
                         <div class="o_sc_muted">
                             <t t-out="line.uom"/><t t-if="line.breakdown"> · contado <t t-out="line.breakdown"/></t><t t-if="line.counted_by"> · contó <t t-out="line.counted_by"/></t>
                         </div>
+                        <div t-if="line.own" class="o_sc_muted"><i class="fa fa-user-times me-1"/> La contaste vos: la aprueba otro supervisor.</div>
                         <div class="o_sc_btn_row">
                             <t t-if="line.state === 'counted'">
                                 <button type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('recount', [line.id])"><i class="fa fa-refresh me-1"/> Recontar</button>
-                                <button type="button" class="o_sc_btn o_sc_btn_primary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('approve', [line.id])"><i class="fa fa-check me-1"/> Aprobar</button>
+                                <button t-if="!line.own" type="button" class="o_sc_btn o_sc_btn_primary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('approve', [line.id])"><i class="fa fa-check me-1"/> Aprobar</button>
                             </t>
-                            <button t-else="" type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('accept_first', [line.id])">Aceptar 1er conteo</button>
+                            <button t-elif="!line.own" type="button" class="o_sc_btn o_sc_btn_secondary o_sc_btn_small" t-att-disabled="state.busy" t-on-click="() => this.superAction('accept_first', [line.id])">Aceptar 1er conteo</button>
                         </div>
                     </div>
                 </t>

@@ -16,6 +16,9 @@
                     <setting id="stock_count_immediate_recount_setting" string="Reconteo inmediato" help="Si el primer conteo supera el umbral, la app pide contar de nuevo en el momento, sin mostrar la cantidad del sistema. Evita la segunda vuelta al depósito.">
                         <field name="stock_count_immediate_recount"/>
                     </setting>
+                    <setting id="stock_count_no_self_approval_setting" string="El supervisor no aprueba lo que contó" help="Las líneas que contó un supervisor las tiene que aprobar otro supervisor. La aprobación automática por tolerancia no cambia.">
+                        <field name="stock_count_no_self_approval"/>
+                    </setting>
                     <setting id="stock_count_thresholds_setting" string="Umbrales" help="Diferencias por encima del umbral exigen un segundo conteo; por debajo de la tolerancia se aprueban solas al pasar a revisión.">
                         <div class="content-group">
                             <div class="row mt8">

@@ -142,6 +142,12 @@ actividad *Segundo conteo*. Las actividades se cierran solas cuando ya no hay na
 hacer. Aprueba cualquier usuario del grupo Supervisor; el aviso va al supervisor del
 recuento.
 
+**El supervisor no aprueba lo que contó.** Con este ajuste de Inventario activo, un
+supervisor no puede aprobar ni aceptar el primer conteo de las líneas que contó él mismo:
+las resuelve otro supervisor. Vale el conteo vigente (el segundo, si lo hubo). Las acciones
+en bloque dejan esas líneas sin tocar y avisan cuántas quedaron. La aprobación automática
+por tolerancia no cambia.
+
 Acciones del supervisor, por línea o en bloque: **Aprobar**, **Pedir reconteo**, **Aceptar
 1er conteo**, **Omitir**, asignar **motivo**. Desde la app, la tarjeta **Supervisar**
 muestra el avance por contador y las líneas para resolver, ordenadas por valor.
