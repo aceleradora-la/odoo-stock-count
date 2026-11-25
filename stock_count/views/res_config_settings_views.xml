@@ -13,6 +13,9 @@
                     <setting id="stock_count_lock_setting" string="Bloqueo de movimientos" help="Comportamiento por defecto de los recuentos nuevos al validar movimientos sobre stock en recuento. La reserva nunca se bloquea.">
                         <field name="stock_count_lock_mode" class="o_light_label"/>
                     </setting>
+                    <setting id="stock_count_immediate_recount_setting" string="Reconteo inmediato" help="Si el primer conteo supera el umbral, la app pide contar de nuevo en el momento, sin mostrar la cantidad del sistema. Evita la segunda vuelta al depósito.">
+                        <field name="stock_count_immediate_recount"/>
+                    </setting>
                     <setting id="stock_count_thresholds_setting" string="Umbrales" help="Diferencias por encima del umbral exigen un segundo conteo; por debajo de la tolerancia se aprueban solas al pasar a revisión.">
                         <div class="content-group">
                             <div class="row mt8">

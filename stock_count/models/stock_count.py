@@ -1,6 +1,7 @@
 from odoo import api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 from odoo.tools import float_compare
+from odoo.tools.misc import formatLang
 
 from .res_company import LOCK_MODES
 
@@ -144,6 +145,12 @@ class StockCount(models.Model):
         string="Aprobar automáticamente hasta (%)",
         default=lambda self: self.env.company.stock_count_auto_approve_pct,
         digits=(16, 2),
+    )
+    immediate_recount = fields.Boolean(
+        string="Reconteo inmediato",
+        default=lambda self: self.env.company.stock_count_immediate_recount,
+        help="Si el primer conteo supera el umbral de reconteo, se pide el segundo conteo "
+        "en el momento, sin esperar a la revisión.",
     )
     recount_min_value = fields.Float(
         string="No recontar si el valor es menor a",
@@ -485,6 +492,18 @@ class StockCount(models.Model):
         self.write({"state": "counting"})
         return True
 
+    def _auto_review(self):
+        """Sin líneas pendientes ni en reconteo, el recuento en conteo pasa solo a
+        revisión."""
+        Line = self.env["stock.count.line"].sudo()
+        for count in self.filtered(lambda count: count.state == "counting"):
+            left = Line.search_count(
+                [("count_id", "=", count.id), ("state", "in", ("pending", "recount"))],
+                limit=1,
+            )
+            if not left:
+                count.sudo().action_to_review()
+
     def _line_needs_recount(self, line):
         self.ensure_one()
         if line.recounted_at or line._is_diff_zero():
@@ -797,6 +816,121 @@ class StockCount(models.Model):
             ),
         )
         return line
+
+    # ------------------------------------------------------------------
+    # Tablero del supervisor (app)
+    # ------------------------------------------------------------------
+    def _check_supervisor(self):
+        if not self.env.user.has_group("stock_count.group_stock_count_manager"):
+            raise AccessError(self.env._("Solo un supervisor de recuentos puede ver el tablero."))
+
+    def _supervisor_line_data(self, line):
+        money = formatLang(self.env, line.diff_value, currency_obj=self.currency_id)
+        return {
+            "id": line.id,
+            "product": line.product_id.display_name,
+            "location": line.location_id.complete_name,
+            "lot": line.lot_id.name or "",
+            "uom": line.product_uom_id.name,
+            "theoretical": line.qty_theoretical,
+            "counted": line.qty_final,
+            "first_count": line.qty_counted,
+            "has_recount": bool(line.recounted_at),
+            "diff": line.qty_diff,
+            "diff_pct": line.diff_pct if line.qty_theoretical else False,
+            "value": line.diff_value,
+            "value_label": money,
+            "state": line.state,
+            "counted_by": (line.recounted_by_id or line.counted_by_id).name or "",
+            "breakdown": line.counted_breakdown or "",
+            "theoretical_breakdown": line.theoretical_breakdown or "",
+            "zero_filled": line.zero_filled,
+            "moved": line.moved_during_count,
+        }
+
+    def _supervisor_count_data(self):
+        self.ensure_one()
+        lines = self.line_ids
+        counters = {}
+        for line in lines:
+            user = line.assigned_user_id or line.counted_by_id
+            entry = counters.setdefault(
+                user.id, {"name": user.name or self.env._("Sin asignar"), "total": 0, "done": 0}
+            )
+            entry["total"] += 1
+            if line.state != "pending":
+                entry["done"] += 1
+        to_approve = lines.filtered(
+            lambda line: line.state == "counted" and self.state == "review"
+        )
+        in_recount = lines.filtered(lambda line: line.state == "recount")
+        review = (to_approve | in_recount).sorted(
+            key=lambda line: (line.state != "counted", -abs(line.diff_value), line.id)
+        )
+        unresolved = lines.filtered(lambda line: line.state in ("pending", "recount", "counted"))
+        return {
+            "id": self.id,
+            "name": self.name,
+            "state": self.state,
+            "state_label": dict(STATES)[self.state],
+            "locations": ", ".join(self.location_ids.mapped("display_name")),
+            "supervisor": self.user_id.name or "",
+            "progress": round(self.progress),
+            "line_count": self.line_count,
+            "counted_count": self.counted_count,
+            "pending_count": self.pending_count,
+            "recount_count": self.recount_count,
+            "approve_count": len(to_approve),
+            "diff_count": self.diff_count,
+            "diff_value_label": formatLang(
+                self.env, self.diff_value, currency_obj=self.currency_id
+            ),
+            "moved_count": self.moved_count,
+            "can_validate": self.state == "review" and not unresolved and bool(lines),
+            "counters": sorted(counters.values(), key=lambda entry: entry["name"]),
+            "lines": [self._supervisor_line_data(line) for line in review[:200]],
+            "more_lines": max(len(review) - 200, 0),
+        }
+
+    @api.model
+    def supervisor_get_data(self):
+        """Recuentos activos con avance por contador y líneas para resolver."""
+        self._check_supervisor()
+        counts = self.search([("state", "in", ACTIVE_STATES)], order="date_planned desc, id desc")
+        return {"counts": [count._supervisor_count_data() for count in counts]}
+
+    @api.model
+    def supervisor_action(self, count_id, action, line_ids=None):
+        """Una acción del supervisor desde el celular. Devuelve el tablero actualizado."""
+        self._check_supervisor()
+        count = self.browse(count_id).exists()
+        if not count:
+            raise UserError(self.env._("El recuento ya no existe."))
+        lines = self.env["stock.count.line"].browse(line_ids or []).exists()
+        if lines - count.line_ids:
+            raise UserError(self.env._("Hay líneas que no son de este recuento."))
+        message = False
+        if action == "approve":
+            lines.action_approve()
+        elif action == "recount":
+            lines.action_request_recount()
+        elif action == "accept_first":
+            lines.action_accept_first_count()
+        elif action == "approve_all":
+            count.action_approve_all()
+        elif action == "accept_all_first":
+            count.action_accept_first_counts()
+        elif action in ("validate", "validate_force"):
+            method = count.action_apply_force if action == "validate_force" else count.action_apply
+            result = method()
+            if isinstance(result, dict):
+                message = result.get("params", {}).get("message")
+        else:
+            raise UserError(self.env._("Acción desconocida: %s", action))
+        data = self.supervisor_get_data()
+        data["message"] = message
+        data["validated"] = count.state == "done" and count.name
+        return data
 
     def _release_quants(self):
         self.ensure_one()

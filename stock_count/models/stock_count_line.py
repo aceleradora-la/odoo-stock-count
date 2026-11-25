@@ -184,6 +184,13 @@ class StockCountLine(models.Model):
     )
     reason_id = fields.Many2one("stock.count.reason", string="Motivo")
     note = fields.Char(string="Comentario")
+    last_op_uid = fields.Char(
+        string="Último pedido de la app",
+        copy=False,
+        readonly=True,
+        help="Identificador del último 'sumar' recibido de la app: si el teléfono lo reenvía "
+        "porque se cortó la señal antes de recibir la respuesta, no se suma dos veces.",
+    )
     move_line_ids = fields.One2many(
         "stock.move.line", "count_line_id", string="Ajuste generado", readonly=True
     )
@@ -420,6 +427,10 @@ class StockCountLine(models.Model):
                 super(StockCountLine, first).write(
                     {"counted_by_id": uid, "counted_at": now, "state": "counted"}
                 )
+                # Sumando de a uno (escaneo, +1) la cantidad todavía no es la final: se
+                # evalúa al terminar la ubicación.
+                if not self.env.context.get("stock_count_incremental"):
+                    first._immediate_recount()
             if "qty_recount" in vals:
                 second = self.filtered(lambda line: line.state == "recount")
                 super(StockCountLine, second).write(
@@ -436,16 +447,34 @@ class StockCountLine(models.Model):
             # Contar la primera línea de un recuento confirmado lo pone en conteo.
             self.count_id.filtered(lambda count: count.state == "ready").sudo().action_start()
             # Cuando se carga la última línea, el recuento pasa solo a revisión.
-            for count in self.count_id.filtered(lambda count: count.state == "counting"):
-                left = self.sudo().search_count(
-                    [("count_id", "=", count.id), ("state", "in", ("pending", "recount"))],
-                    limit=1,
-                )
-                if not left:
-                    count.sudo().action_to_review()
+            self.count_id._auto_review()
             # Un reconteo que dejó todo aprobado valida el recuento.
             self.count_id._try_auto_validate()
         return res
+
+    def _immediate_recount(self):
+        """Reconteo inmediato: el primer conteo que supera el umbral vuelve a contarse en
+        el momento, sin esperar a la revisión. Al contador no se le informa cuánto
+        esperaba el sistema, solo que tiene que contar de nuevo."""
+        again = self.filtered(
+            lambda line: (
+                line.state == "counted"
+                and line.count_id.immediate_recount
+                and line.count_state in ("ready", "counting")
+                and not line.recounted_at
+                and not line.count_id._line_within_tolerance(line)
+                and line.count_id._line_needs_recount(line)
+            )
+        )
+        super(StockCountLine, again).write(
+            {
+                "state": "recount",
+                "qty_recount": 0.0,
+                "qty_recount_packs": 0.0,
+                "qty_recount_loose": 0.0,
+            }
+        )
+        return again
 
     def _is_serial(self):
         self.ensure_one()
@@ -623,6 +652,7 @@ class StockCountLine(models.Model):
                 for count in counts
             ],
             "lines": [line.sudo()._counter_line_data() for line in lines],
+            "is_manager": user.has_group("stock_count.group_stock_count_manager"),
         }
 
     @api.model
@@ -758,11 +788,14 @@ class StockCountLine(models.Model):
         unidad del producto, o embalajes + sueltas si la línea tiene unidad de recuento."""
         self.ensure_one()
         packs_f, loose_f, qty_f = PACK_FIELDS[self._count_stage()]
+        was_recount = self.state == "recount"
         if packs is not None or loose is not None:
             self.write({packs_f: packs or 0.0, loose_f: loose or 0.0})
         else:
             self.write({qty_f: quantity or 0.0})
-        return self.sudo()._counter_line_data()
+        data = self.sudo()._counter_line_data()
+        data["recount_requested"] = self.state == "recount" and not was_recount
+        return data
 
     def counter_set_pack(self, pack_id=False):
         """El contador cambia la unidad en la que cuenta este renglón: la unidad del
@@ -791,16 +824,24 @@ class StockCountLine(models.Model):
             super(StockCountLine, line).write({packs_f: packs, loose_f: loose})
         return line._counter_line_data()
 
-    def counter_add_quantity(self, delta=1.0, pack_id=False):
+    def counter_add_quantity(self, delta=1.0, pack_id=False, op_uid=False):
         """Suma a la cantidad contada (delta en la unidad del producto). Si el escaneo fue
         del código del embalaje de la línea, suma embalajes enteros. Bloquea la fila para
-        que dos escaneos simultáneos (dos contadores, o doble toque) no se pisen."""
+        que dos escaneos simultáneos (dos contadores, o doble toque) no se pisen.
+
+        `op_uid` identifica el pedido de la app: si llega repetido (el teléfono lo reenvía
+        porque perdió la señal antes de recibir la respuesta) no se suma otra vez."""
         self.ensure_one()
         self.check_access("write")
         self.env.cr.execute("SELECT id FROM stock_count_line WHERE id = %s FOR UPDATE", [self.id])
         self.invalidate_recordset()
+        if op_uid:
+            if self.sudo().last_op_uid == op_uid:
+                return self.sudo()._counter_line_data()
+            super(StockCountLine, self.sudo()).write({"last_op_uid": op_uid})
         packs_f, loose_f, qty_f = PACK_FIELDS[self._count_stage()]
         current = self[qty_f]
+        self = self.with_context(stock_count_incremental=True)
         if self._is_serial():
             if self.state == "counted" and current >= 1:
                 data = self.sudo()._counter_line_data()
@@ -861,6 +902,14 @@ class StockCountLine(models.Model):
         if pending and not zero_pending:
             return {"pending": len(pending), "done": False}
         pending.with_context(stock_count_zero_fill=True).write({"qty_counted": 0.0})
+        # Lo contado sumando de a uno (escaneo, +1) recién acá es una cantidad final.
+        counted = self._counter_domain(count_id) + [
+            ("state", "=", "counted"),
+            ("counted_by_id", "=", self.env.user.id),
+        ]
+        if location_id:
+            counted.append(("location_id", "=", location_id))
+        self.search(counted)._immediate_recount()
         count = self.env["stock.count"].sudo().browse(count_id)
         recount = self.search(self._counter_domain(count_id) + [("state", "=", "recount")])
         remaining = self.search(self._counter_domain(count_id) + [("state", "=", "pending")])
@@ -913,6 +962,7 @@ class StockCountLine(models.Model):
                 "note": self.env._("1er conteo aceptado sin recontar por %s", self.env.user.name),
             }
         )
+        self.count_id._auto_review()
         self.count_id._try_auto_validate()
         return True
 
@@ -948,6 +998,7 @@ class StockCountLine(models.Model):
         if any(line.state == "applied" for line in self):
             raise UserError(self.env._("No se puede omitir una línea ya validada."))
         self.write({"state": "skipped"})
+        self.count_id._auto_review()
         self.count_id._try_auto_validate()
         return True
 
