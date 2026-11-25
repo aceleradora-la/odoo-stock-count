@@ -22,7 +22,14 @@ class ResCompany(models.Model):
         default="block",
         required=True,
         help="Qué pasa al validar un movimiento sobre un producto y ubicación que están "
-        "en un recuento confirmado. La reserva nunca se bloquea, solo la validación.",
+        "en un recuento iniciado. La reserva nunca se bloquea, solo la validación.",
+    )
+    stock_count_no_self_approval = fields.Boolean(
+        string="El supervisor no aprueba lo que contó",
+        default=False,
+        help="Un supervisor no puede aprobar ni aceptar el primer conteo de las líneas que "
+        "contó él mismo: las tiene que resolver otro supervisor. La aprobación automática "
+        "por tolerancia no cambia.",
     )
     stock_count_recount_threshold_pct = fields.Float(
         string="Reconteo si la diferencia supera (%)",

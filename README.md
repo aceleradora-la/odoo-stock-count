@@ -85,6 +85,7 @@ Inventario › Configuración › Ajustes › **Recuento de inventario**:
 | Conteo ciego | Los contadores no ven la cantidad del sistema, la diferencia ni su valor |
 | Bloqueo de movimientos | Modo por defecto de los recuentos nuevos: bloquear la validación, avisar y marcar la línea, o sin control |
 | Reconteo inmediato | Si el primer conteo supera el umbral, la app pide contar de nuevo en el momento |
+| El supervisor no aprueba lo que contó | Las líneas que contó un supervisor las tiene que aprobar otro supervisor |
 | Umbrales | Reconteo si la diferencia supera un porcentaje o una cantidad de unidades; aprobación automática hasta un porcentaje; no recontar si el valor de la diferencia es menor a un importe |
 
 Otros puntos de configuración:

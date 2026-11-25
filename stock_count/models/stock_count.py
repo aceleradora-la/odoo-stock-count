@@ -623,6 +623,7 @@ class StockCount(models.Model):
             in_recount = count.line_ids.filtered(lambda line: line.state == "recount")
             # --- supervisor
             mine = activities.filtered(lambda act: act.activity_type_id == review)
+            own = to_approve.with_user(count.user_id)._self_counted() if count.user_id else []
             open_recount = activities.filtered(lambda act: act.activity_type_id == recount)
             recount_users = open_recount.user_id
             if in_review and to_approve and count.user_id:
@@ -636,6 +637,15 @@ class StockCount(models.Model):
                             name=count.name,
                             approve=len(to_approve),
                             recount=len(in_recount),
+                        )
+                        + (
+                            " "
+                            + self.env._(
+                                "%s las contaste vos: las tiene que aprobar otro supervisor.",
+                                len(own),
+                            )
+                            if own
+                            else ""
                         ),
                     )
             elif mine:
@@ -788,12 +798,34 @@ class StockCount(models.Model):
         (self - already)._sync_review_activities()
         return True
 
+    def _own_lines_notification(self, done, own):
+        """Aviso de una acción en bloque que dejó afuera lo que contó el propio usuario."""
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "message": self.env._(
+                    "%(done)s líneas resueltas. Quedan %(own)s que contaste vos: las tiene "
+                    "que resolver otro supervisor.",
+                    done=done,
+                    own=own,
+                ),
+                "type": "warning",
+                "sticky": True,
+                "next": {"type": "ir.actions.act_window_close"},
+            },
+        }
+
     def action_approve_all(self):
         """Aprueba todas las líneas contadas que no estén en reconteo."""
         self._check_state(("review", "done"), self.env._("aprobar"))
         if all(count.state == "done" for count in self):
             return True
-        to_approve = self.line_ids.filtered(lambda line: line.state == "counted")
+        counted = self.line_ids.filtered(lambda line: line.state == "counted")
+        own = counted._self_counted()
+        to_approve = counted - own
+        if not to_approve and own:
+            return self._own_lines_notification(0, len(own))
         if not to_approve:
             recount = len(self.line_ids.filtered(lambda line: line.state == "recount"))
             message = (
@@ -812,15 +844,22 @@ class StockCount(models.Model):
             }
         to_approve.action_approve()
         self._try_auto_validate()
+        if own:
+            return self._own_lines_notification(len(to_approve), len(own))
         return True
 
     def action_accept_first_counts(self):
         """Da por bueno el primer conteo de todas las líneas en reconteo."""
         self._check_state(("review", "done"), self.env._("aceptar"))
+        skipped = accepted = 0
         for count in self:
             lines = count.line_ids.filtered(lambda line: line.state == "recount")
+            own = lines._self_counted(first_count=True)
+            skipped += len(own)
+            lines -= own
             if not lines:
                 continue
+            accepted += len(lines)
             lines.action_accept_first_count()
             count.message_post(
                 subtype_xmlid="mail.mt_note",
@@ -831,6 +870,8 @@ class StockCount(models.Model):
                 ),
             )
         self._try_auto_validate()
+        if skipped:
+            return self._own_lines_notification(accepted, skipped)
         return True
 
     def action_approve_within_tolerance(self):
@@ -838,7 +879,7 @@ class StockCount(models.Model):
         for count in self:
             counted = count.line_ids.filtered(lambda line: line.state == "counted")
             to_approve = self.env["stock.count.line"]
-            for line in counted:
+            for line in counted - counted._self_counted():
                 if count._line_within_tolerance(line):
                     to_approve |= line
             to_approve.action_approve()
@@ -1058,6 +1099,8 @@ class StockCount(models.Model):
             "theoretical_breakdown": line.theoretical_breakdown or "",
             "zero_filled": line.zero_filled,
             "moved": line.moved_during_count,
+            # La contó quien mira el tablero y la compañía no deja aprobar lo propio
+            "own": bool(line._self_counted(first_count=line.state == "recount")),
         }
 
     def _supervisor_count_data(self):
@@ -1128,12 +1171,13 @@ class StockCount(models.Model):
             lines.action_request_recount()
         elif action == "accept_first":
             lines.action_accept_first_count()
-        elif action == "approve_all":
-            count.action_approve_all()
-        elif action == "accept_all_first":
-            count.action_accept_first_counts()
-        elif action in ("validate", "validate_force"):
-            method = count.action_apply_force if action == "validate_force" else count.action_apply
+        elif action in ("approve_all", "accept_all_first", "validate", "validate_force"):
+            method = {
+                "approve_all": count.action_approve_all,
+                "accept_all_first": count.action_accept_first_counts,
+                "validate": count.action_apply,
+                "validate_force": count.action_apply_force,
+            }[action]
             result = method()
             if isinstance(result, dict):
                 message = result.get("params", {}).get("message")

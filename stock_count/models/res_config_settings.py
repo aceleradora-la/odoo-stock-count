@@ -23,3 +23,6 @@ class ResConfigSettings(models.TransientModel):
     stock_count_immediate_recount = fields.Boolean(
         related="company_id.stock_count_immediate_recount", readonly=False
     )
+    stock_count_no_self_approval = fields.Boolean(
+        related="company_id.stock_count_no_self_approval", readonly=False
+    )

@@ -311,3 +311,59 @@ class TestStockCountSupervisor(Phase3Common, TransactionCase):
         self.assertEqual(screw.state, "counted", "sin reconteo: espera al supervisor")
         self.assertEqual(roller.state, "approved")
         self.assertEqual(paint.state, "recount")
+
+    # ------------------------------------------------------------------
+    # El supervisor no aprueba lo que contó
+    # ------------------------------------------------------------------
+    def _count_with_supervisor_counting(self):
+        """Aprueba solo hasta 2 %. El supervisor cuenta los tornillos (−10 %) y el
+        contador los rodillos (−25 %): las dos líneas esperan aprobación."""
+        count = self._count(
+            auto_approve_tolerance_pct=2.0, recount_threshold_qty=0.0, recount_threshold_pct=50.0
+        )
+        screw, roller = self._line(count, self.screw), self._line(count, self.roller)
+        self.Line.with_user(self.supervisor).browse(screw.id).write({"qty_counted": 90.0})
+        self._as_counter(roller).counter_set_quantity(30.0)
+        self._as_counter(self._line(count, self.paint, self.lot_a)).counter_set_quantity(36.0)
+        self.assertEqual(count.state, "review")
+        self.assertEqual((screw.state, roller.state), ("counted", "counted"))
+        return count, screw, roller
+
+    def test_supervisor_approves_own_lines_by_default(self):
+        count, screw, _roller = self._count_with_supervisor_counting()
+        screw.with_user(self.supervisor).action_approve()
+        self.assertEqual(screw.state, "approved")
+
+    def test_supervisor_cannot_approve_what_they_counted(self):
+        self.company.stock_count_no_self_approval = True
+        count, screw, roller = self._count_with_supervisor_counting()
+        board = {line["id"]: line["own"] for line in self._board(count)["lines"]}
+        self.assertEqual(board, {screw.id: True, roller.id: False})
+        with self.assertRaises(UserError):
+            screw.with_user(self.supervisor).action_approve()
+
+        result = count.with_user(self.supervisor).action_approve_all()
+        self.assertEqual(roller.state, "approved", "lo que contó otro sí lo aprueba")
+        self.assertEqual(screw.state, "counted")
+        self.assertEqual(result["tag"], "display_notification")
+        self.assertEqual(count.state, "review")
+
+        other = self.supervisor.copy({"name": "Raúl Sosa", "login": "raul.sosa"})
+        screw.with_user(other).action_approve()
+        self.assertEqual(count.state, "done")
+
+    def test_supervisor_cannot_accept_their_own_first_count(self):
+        self.company.stock_count_no_self_approval = True
+        count = self._count()
+        screw = self._line(count, self.screw)
+        self.Line.with_user(self.supervisor).browse(screw.id).write({"qty_counted": 80.0})
+        self._as_counter(self._line(count, self.roller)).counter_set_quantity(40.0)
+        self._as_counter(self._line(count, self.paint, self.lot_a)).counter_set_quantity(36.0)
+        self.assertEqual(screw.state, "recount")
+        with self.assertRaises(UserError):
+            screw.with_user(self.supervisor).action_accept_first_count()
+        # Si recuenta otro, el conteo vigente ya no es del supervisor
+        self._as_counter(screw).counter_set_quantity(90.0)
+        self.assertEqual(screw.state, "counted")
+        screw.with_user(self.supervisor).action_approve()
+        self.assertEqual(count.state, "done")
