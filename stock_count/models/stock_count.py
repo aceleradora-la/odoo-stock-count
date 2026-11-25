@@ -609,6 +609,8 @@ class StockCount(models.Model):
             in_recount = count.line_ids.filtered(lambda line: line.state == "recount")
             # --- supervisor
             mine = activities.filtered(lambda act: act.activity_type_id == review)
+            open_recount = activities.filtered(lambda act: act.activity_type_id == recount)
+            recount_users = open_recount.user_id
             if in_review and to_approve and count.user_id:
                 if not mine:
                     count.activity_schedule(
@@ -632,8 +634,7 @@ class StockCount(models.Model):
             if in_review:
                 for line in in_recount:
                     users |= line.assigned_user_id or line.counted_by_id
-            open_recount = activities.filtered(lambda act: act.activity_type_id == recount)
-            for user in users - open_recount.user_id:
+            for user in users - recount_users:
                 if not count.with_user(user).has_access("read"):
                     continue
                 lines = in_recount.filtered(
@@ -648,7 +649,7 @@ class StockCount(models.Model):
                         n=len(lines),
                     ),
                 )
-            for user in open_recount.user_id - users:
+            for user in recount_users - users:
                 if count.state in ("review", "done"):
                     count.activity_feedback([recount_type], user_id=user.id)
                 else:
@@ -670,17 +671,18 @@ class StockCount(models.Model):
         self.ensure_one()
         if line.recounted_at or line._is_diff_zero():
             return False
+        params = self._line_params(line)
         diff = abs(line.qty_diff)
         rounding = line._rounding()
-        over_qty = self.recount_threshold_qty > 0 and (
-            float_compare(diff, self.recount_threshold_qty, precision_rounding=rounding) > 0
+        over_qty = params["recount_threshold_qty"] > 0 and (
+            float_compare(diff, params["recount_threshold_qty"], precision_rounding=rounding) > 0
         )
         over_pct = (
-            self.recount_threshold_pct > 0
+            params["recount_threshold_pct"] > 0
             and line.qty_theoretical
-            and abs(line.diff_pct) > self.recount_threshold_pct
+            and abs(line.diff_pct) > params["recount_threshold_pct"]
         )
-        if self.recount_min_value > 0 and abs(line.diff_value) < self.recount_min_value:
+        if params["recount_min_value"] > 0 and abs(line.diff_value) < params["recount_min_value"]:
             return False
         return bool(over_qty or over_pct)
 
@@ -694,8 +696,18 @@ class StockCount(models.Model):
         return abs(line.diff_pct) <= self._line_params(line)["auto_approve_tolerance_pct"]
 
     def _line_params(self, line):
-        """Umbrales que rigen una línea. Hoy son los del recuento."""
+        """Umbrales que rigen una línea: los del producto si tiene propios; si no, los de
+        su categoría (o la primera categoría superior que los tenga); si no, los del
+        recuento."""
         self.ensure_one()
+        source = line.product_id.sudo()._stock_count_params_source()
+        if source:
+            return {
+                "recount_threshold_pct": source.stock_count_recount_threshold_pct,
+                "recount_threshold_qty": source.stock_count_recount_threshold_qty,
+                "auto_approve_tolerance_pct": source.stock_count_auto_approve_pct,
+                "recount_min_value": source.stock_count_recount_min_value,
+            }
         return {
             "recount_threshold_pct": self.recount_threshold_pct,
             "recount_threshold_qty": self.recount_threshold_qty,
@@ -711,11 +723,12 @@ class StockCount(models.Model):
             return True
         if line.zero_filled:
             return False
-        if self.auto_approve_tolerance_pct >= 100:
+        tolerance = self._line_params(line)["auto_approve_tolerance_pct"]
+        if tolerance >= 100:
             return True
         if not line.qty_theoretical:
             return False
-        return abs(line.diff_pct) <= self.auto_approve_tolerance_pct
+        return abs(line.diff_pct) <= tolerance
 
     def action_to_review(self):
         """En conteo → En revisión: aprueba lo tolerable y manda a reconteo lo que se pasa.

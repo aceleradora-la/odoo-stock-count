@@ -33,4 +33,48 @@
             </xpath>
         </field>
     </record>
+
+    <record id="product_template_form_view_stock_count" model="ir.ui.view">
+        <field name="name">product.template.form.stock_count</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='inventory']" position="inside">
+                <group name="stock_count" string="Recuento de inventario">
+                    <group>
+                        <field name="stock_count_lock_mode" placeholder="El del recuento"/>
+                        <field name="stock_count_custom"/>
+                    </group>
+                    <group invisible="not stock_count_custom">
+                        <field name="stock_count_recount_threshold_pct"/>
+                        <field name="stock_count_recount_threshold_qty"/>
+                        <field name="stock_count_auto_approve_pct"/>
+                        <field name="stock_count_recount_min_value"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="product_category_form_view_stock_count" model="ir.ui.view">
+        <field name="name">product.category.form.stock_count</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group name="stock_count" string="Recuento de inventario">
+                    <group>
+                        <field name="stock_count_lock_mode" placeholder="El del recuento"/>
+                        <field name="stock_count_custom"/>
+                    </group>
+                    <group invisible="not stock_count_custom">
+                        <field name="stock_count_recount_threshold_pct"/>
+                        <field name="stock_count_recount_threshold_qty"/>
+                        <field name="stock_count_auto_approve_pct"/>
+                        <field name="stock_count_recount_min_value"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
 </odoo>

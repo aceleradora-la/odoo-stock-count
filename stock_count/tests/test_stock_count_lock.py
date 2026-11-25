@@ -327,3 +327,26 @@ class TestStockCountLock(TransactionCase):
         self.assertEqual(line.qty_diff, 0.0)
         self.assertEqual(count.state, "done")
         self.assertEqual(self._qty(self.screw, self.shelf), 90.0)
+
+    def test_lock_mode_by_category_and_product(self):
+        """El recuento bloquea; la categoría de los rodillos solo avisa y el tornillo,
+        por producto, no se controla."""
+        categ = self.env["product.category"].create(
+            {"name": "Rodillos", "stock_count_lock_mode": "warn"}
+        )
+        self.roller.categ_id = categ
+        self.screw.product_tmpl_id.stock_count_lock_mode = "none"
+        count = self._create_count()
+        count.action_confirm()
+        count.action_start()
+        free = self._delivery(self.screw, 5.0)
+        free.button_validate()
+        self.assertEqual(free.state, "done")
+        warned = self._delivery(self.roller, 2.0)
+        warned.button_validate()
+        self.assertEqual(warned.state, "done")
+        roller = count.line_ids.filtered(lambda line: line.product_id == self.roller)
+        self.assertTrue(roller.moved_during_count)
+        blocked = self._delivery(self.paint, 1.0, lot=self.lot_a)
+        with self.assertRaises(UserError):
+            blocked.button_validate()
