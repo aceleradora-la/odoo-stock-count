@@ -105,6 +105,7 @@ el total en la unidad del producto.
 
 - **Odoo 19:** campo *Unidades de recuento* en la pestaña Inventario del producto: uno o
   varios de sus embalajes.
+- **Odoo 18:** columna *Recuento* en los embalajes del producto: uno o varios.
 - En la app, el contador puede cambiar cada renglón entre la unidad del producto, uno
   solo de sus embalajes o todas las unidades de recuento. Lo ya cargado se conserva.
 - Una cantidad cargada en la unidad del producto se reparte llenando primero el embalaje
