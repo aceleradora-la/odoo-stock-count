@@ -39,3 +39,8 @@ class ResCompany(models.Model):
         default=1.0,
         digits=(16, 2),
     )
+    stock_count_recount_min_value = fields.Float(
+        string="No recontar si el valor de la diferencia es menor a",
+        default=0.0,
+        digits="Product Price",
+    )

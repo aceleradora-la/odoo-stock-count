@@ -105,6 +105,21 @@ class StockCountLine(models.Model):
         help="Diferencia valorizada al costo del producto.",
     )
     currency_id = fields.Many2one(related="company_id.currency_id")
+    unit_cost = fields.Float(
+        string="Costo unitario",
+        digits="Product Price",
+        readonly=True,
+        copy=False,
+        help="Costo del producto con el que se valoriza la diferencia. Se toma al crear la "
+        "línea y se congela al validar, para que el historial no cambie con el costo.",
+    )
+    zero_filled = fields.Boolean(
+        string="Cerrada en cero al terminar",
+        readonly=True,
+        copy=False,
+        help="El contador terminó sin cargar cantidad y la línea quedó en 0. Nunca se "
+        "aprueba sola: la confirma un reconteo o el supervisor.",
+    )
 
     assigned_user_id = fields.Many2one("res.users", string="Asignado a", index=True)
     state = fields.Selection(LINE_STATES, default="pending", required=True, index=True, copy=False)
@@ -153,7 +168,7 @@ class StockCountLine(models.Model):
         for line in self:
             line.qty_final = line.qty_recount if line.recounted_at else line.qty_counted
 
-    @api.depends("qty_final", "qty_theoretical", "state", "product_id.standard_price")
+    @api.depends("qty_final", "qty_theoretical", "state", "unit_cost")
     def _compute_diff(self):
         for line in self:
             if line.state in ("pending", "skipped"):
@@ -164,7 +179,19 @@ class StockCountLine(models.Model):
             diff = line.qty_final - line.qty_theoretical
             line.qty_diff = diff
             line.diff_pct = 100.0 * diff / line.qty_theoretical if line.qty_theoretical else 0.0
-            line.diff_value = diff * line.product_id.with_company(line.company_id).standard_price
+            line.diff_value = diff * line.unit_cost
+
+    def _current_unit_cost(self):
+        self.ensure_one()
+        return self.product_id.sudo().with_company(self.company_id).standard_price
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        lines = super().create(vals_list)
+        for line, vals in zip(lines, vals_list, strict=True):
+            if "unit_cost" not in vals:
+                super(StockCountLine, line).write({"unit_cost": line._current_unit_cost()})
+        return lines
 
     def _rounding(self):
         self.ensure_one()
@@ -240,8 +267,14 @@ class StockCountLine(models.Model):
         counting = "qty_counted" in vals or "qty_recount" in vals
         if counting and not self.env.context.get("stock_count_skip_checks"):
             self._check_can_count()
+        if counting:
+            self._check_serial_quantity(vals)
         res = super().write(vals)
         if counting:
+            # Una cantidad cargada a mano deja de ser un "cierre en cero"
+            zero_fill = bool(self.env.context.get("stock_count_zero_fill"))
+            flagged = self.filtered(lambda line: line.zero_filled != zero_fill)
+            super(StockCountLine, flagged).write({"zero_filled": zero_fill})
             now = fields.Datetime.now()
             uid = self.env.user.id
             if "qty_counted" in vals:
@@ -266,11 +299,35 @@ class StockCountLine(models.Model):
             self.count_id.filtered(lambda count: count.state == "ready").sudo().action_start()
             # Cuando se carga la última línea, el recuento pasa solo a revisión.
             for count in self.count_id.filtered(lambda count: count.state == "counting"):
-                if not count.line_ids.filtered(lambda line: line.state in ("pending", "recount")):
+                left = self.sudo().search_count(
+                    [("count_id", "=", count.id), ("state", "in", ("pending", "recount"))],
+                    limit=1,
+                )
+                if not left:
                     count.sudo().action_to_review()
             # Un reconteo que dejó todo aprobado valida el recuento.
             self.count_id._try_auto_validate()
         return res
+
+    def _is_serial(self):
+        self.ensure_one()
+        return bool(self.lot_id) and self.product_id.sudo().tracking == "serial"
+
+    def _check_serial_quantity(self, vals):
+        """Un número de serie está (1) o no está (0): no admite otra cantidad."""
+        quantities = [vals[name] for name in ("qty_counted", "qty_recount") if name in vals]
+        if all(qty in (0, 1) for qty in quantities):
+            return
+        for line in self:
+            if line._is_serial():
+                raise UserError(
+                    self.env._(
+                        "%(product)s · serie %(lot)s: un número de serie solo puede estar "
+                        "(1) o no estar (0).",
+                        product=line.product_id.display_name,
+                        lot=line.lot_id.name,
+                    )
+                )
 
     # ------------------------------------------------------------------
     # Conteo ciego forzado por el ORM
@@ -364,6 +421,9 @@ class StockCountLine(models.Model):
             "product_barcode": self.product_id.barcode or "",
             "lot_id": self.lot_id.id,
             "lot_name": self.lot_id.name or "",
+            "package_name": self.package_id.display_name or "",
+            "owner_name": self.owner_id.display_name or "",
+            "is_serial": self._is_serial(),
             "uom_name": self.product_uom_id.name,
             "state": self.state,
             "is_recount": self.state == "recount",
@@ -430,6 +490,7 @@ class StockCountLine(models.Model):
                 {
                     "type": "product",
                     "product_id": product.id,
+                    "product_name": product.display_name,
                     "lot_id": lot.id if lot else False,
                     "quantity": quantity or 1.0,
                 }
@@ -526,9 +587,37 @@ class StockCountLine(models.Model):
         return self.sudo()._counter_line_data()
 
     def counter_add_quantity(self, delta=1.0):
+        """Suma a la cantidad contada. Bloquea la fila para que dos escaneos simultáneos
+        (dos contadores, o doble toque) no se pisen."""
         self.ensure_one()
+        self.check_access("write")
+        self.env.cr.execute("SELECT id FROM stock_count_line WHERE id = %s FOR UPDATE", [self.id])
+        self.invalidate_recordset(["qty_counted", "qty_recount", "state"])
+        counted = self.state == "counted" or (self.state == "recount" and self.recounted_at)
         current = self.qty_recount if self.state == "recount" else self.qty_counted
+        if self._is_serial():
+            if counted and current >= 1:
+                data = self.sudo()._counter_line_data()
+                data["serial_already"] = True
+                return data
+            return self.counter_set_quantity(1.0)
         return self.counter_set_quantity(current + delta)
+
+    @api.model
+    def counter_add_unexpected(
+        self, count_id, location_id, product_id, lot_id=False, quantity=1.0
+    ):
+        """Producto encontrado en una ubicación donde el recuento no lo esperaba,
+        agregado desde la app al escanearlo."""
+        count = self.env["stock.count"].browse(count_id)
+        count.check_access("read")
+        product = self.env["product.product"].browse(product_id)
+        lot = self.env["stock.lot"].browse(lot_id or [])
+        if product.sudo().tracking != "none" and not lot:
+            return {"need_lot": True}
+        location = self.env["stock.location"].browse(location_id)
+        line = count._add_unexpected_line(product, location, lot, quantity)
+        return {"line": line.sudo()._counter_line_data()}
 
     @api.model
     def counter_finish(self, count_id, location_id=False, zero_pending=False):
@@ -543,9 +632,21 @@ class StockCountLine(models.Model):
         if location_id:
             domain.append(("location_id", "=", location_id))
         pending = self.search(domain)
+        if not location_id:
+            # Al terminar todo el recuento no se cierran en cero las líneas sin asignar
+            # de ubicaciones donde este contador no contó nada: pueden ser de otro.
+            count = self.env["stock.count"].sudo().browse(count_id)
+            if len(count.counter_ids) > 1:
+                mine = self.search(
+                    self._counter_domain(count_id)
+                    + [("state", "!=", "pending"), ("counted_by_id", "=", self.env.user.id)]
+                ).location_id
+                pending = pending.filtered(
+                    lambda line: line.assigned_user_id == self.env.user or line.location_id in mine
+                )
         if pending and not zero_pending:
             return {"pending": len(pending), "done": False}
-        pending.write({"qty_counted": 0.0})
+        pending.with_context(stock_count_zero_fill=True).write({"qty_counted": 0.0})
         count = self.env["stock.count"].sudo().browse(count_id)
         recount = self.search(self._counter_domain(count_id) + [("state", "=", "recount")])
         remaining = self.search(self._counter_domain(count_id) + [("state", "=", "pending")])
@@ -668,25 +769,50 @@ class StockCountLine(models.Model):
         return quant
 
     def _apply(self):
-        """Aplica la cantidad final sobre el quant vía stock.quant._apply_inventory."""
-        self.ensure_one()
-        if self.state != "approved":
-            return
-        # La cantidad contada es absoluta: se compara con lo que hay HOY en el quant, no
-        # con el snapshot. Así, si el stock se movió y el supervisor decidió aplicar
-        # igualmente, el ajuste deja el quant en la cantidad contada.
-        current = self.quant_id.quantity if self.quant_id else 0.0
-        if float_compare(current, self.qty_final, precision_rounding=self._rounding()) == 0:
-            self.write({"state": "applied"})
-            return
-        quant = self._get_or_create_quant()
-        ctx = {
-            "inventory_name": self.count_id.name,
-            "stock_count_id": self.count_id.id,
-            "stock_count_line_id": self.id,
-            "stock_count_loss_location_id": self.reason_id.location_dest_id.id,
-        }
-        quant = quant.sudo().with_company(self.company_id).with_context(**ctx)
-        quant.write({"inventory_quantity": self.qty_final, "user_id": self.env.user.id})
-        quant._apply_inventory()
-        self.write({"state": "applied"})
+        """Aplica la cantidad final sobre los quants vía stock.quant._apply_inventory,
+        todas las líneas de un recuento en una sola pasada."""
+        lines = self.filtered(lambda line: line.state == "approved")
+        for count in lines.count_id:
+            count_lines = lines.filtered(lambda line, count=count: line.count_id == count)
+            # El valor de la diferencia queda al costo del momento de validar
+            for line in count_lines:
+                super(StockCountLine, line).write({"unit_cost": line._current_unit_cost()})
+            # La cantidad contada es absoluta: se compara con lo que hay HOY en el quant,
+            # no con el snapshot. Así, si el stock se movió y el supervisor decidió
+            # validar igualmente, el ajuste deja el quant en la cantidad contada.
+            line_by_quant = {}
+            loss_by_quant = {}
+            for line in count_lines:
+                current = line.quant_id.quantity if line.quant_id else 0.0
+                if (
+                    float_compare(current, line.qty_final, precision_rounding=line._rounding())
+                    == 0
+                ):
+                    continue
+                quant = line._get_or_create_quant()
+                line_by_quant[quant.id] = line
+                loss_by_quant[quant.id] = line.reason_id.location_dest_id.id
+            if line_by_quant:
+                quants = (
+                    self.env["stock.quant"]
+                    .browse(list(line_by_quant))
+                    .sudo()
+                    .with_company(count.company_id)
+                    .with_context(
+                        inventory_name=count.name,
+                        stock_count_id=count.id,
+                        stock_count_line_by_quant={
+                            quant_id: line.id for quant_id, line in line_by_quant.items()
+                        },
+                        stock_count_loss_by_quant=loss_by_quant,
+                    )
+                )
+                for quant in quants:
+                    quant.write(
+                        {
+                            "inventory_quantity": line_by_quant[quant.id].qty_final,
+                            "user_id": self.env.user.id,
+                        }
+                    )
+                quants._apply_inventory()
+            count_lines.write({"state": "applied"})

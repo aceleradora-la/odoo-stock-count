@@ -145,6 +145,14 @@ class StockCount(models.Model):
         default=lambda self: self.env.company.stock_count_auto_approve_pct,
         digits=(16, 2),
     )
+    recount_min_value = fields.Float(
+        string="No recontar si el valor es menor a",
+        default=lambda self: self.env.company.stock_count_recount_min_value,
+        digits="Product Price",
+        help="Materialidad: una diferencia cuyo valor a costo es menor a este monto no "
+        "exige segundo conteo aunque supere los umbrales; queda para que la apruebe el "
+        "supervisor. 0 = sin mínimo.",
+    )
 
     line_ids = fields.One2many("stock.count.line", "count_id", string="Líneas", copy=False)
     move_ids = fields.One2many(
@@ -207,25 +215,39 @@ class StockCount(models.Model):
     )
     def _compute_line_stats(self):
         for count in self:
-            lines = count.line_ids
+            # Una sola pasada: se recalcula con cada cantidad cargada.
             # Una línea en reconteo ya tiene un primer conteo: cuenta como contada.
-            counted = lines.filtered(lambda line: line.state != "pending")
-            with_diff = counted.filtered(
-                lambda line: line.state != "skipped" and not line._is_diff_zero()
-            )
-            count.line_count = len(lines)
-            count.counted_count = len(counted)
-            count.pending_count = len(lines) - len(counted)
-            count.recount_count = len(lines.filtered(lambda line: line.state == "recount"))
-            count.diff_count = len(with_diff)
-            count.diff_value = sum(with_diff.mapped("diff_value"))
-            count.progress = 100.0 * len(counted) / len(lines) if lines else 0.0
-            count.moved_count = len(lines.filtered("moved_during_count"))
-            count.has_recount = any(line.state == "recount" or line.recounted_at for line in lines)
-            effective = counted.filtered(lambda line: line.state != "skipped")
-            count.accuracy = (
-                100.0 * (len(effective) - len(with_diff)) / len(effective) if effective else 0.0
-            )
+            total = counted = recount = effective = with_diff = moved = 0
+            diff_value = 0.0
+            has_recount = False
+            for line in count.line_ids:
+                total += 1
+                state = line.state
+                if line.moved_during_count:
+                    moved += 1
+                if state == "recount":
+                    recount += 1
+                if state == "recount" or line.recounted_at:
+                    has_recount = True
+                if state == "pending":
+                    continue
+                counted += 1
+                if state == "skipped":
+                    continue
+                effective += 1
+                if not line._is_diff_zero():
+                    with_diff += 1
+                    diff_value += line.diff_value
+            count.line_count = total
+            count.counted_count = counted
+            count.pending_count = total - counted
+            count.recount_count = recount
+            count.diff_count = with_diff
+            count.diff_value = diff_value
+            count.progress = 100.0 * counted / total if total else 0.0
+            count.moved_count = moved
+            count.has_recount = has_recount
+            count.accuracy = 100.0 * (effective - with_diff) / effective if effective else 0.0
 
     def _compute_is_manager(self):
         is_manager = self.env.user.has_group("stock_count.group_stock_count_manager")
@@ -477,6 +499,8 @@ class StockCount(models.Model):
             and line.qty_theoretical
             and abs(line.diff_pct) > self.recount_threshold_pct
         )
+        if self.recount_min_value > 0 and abs(line.diff_value) < self.recount_min_value:
+            return False
         return bool(over_qty or over_pct)
 
     def _line_within_tolerance(self, line):
@@ -485,6 +509,8 @@ class StockCount(models.Model):
         self.ensure_one()
         if line._is_diff_zero():
             return True
+        if line.zero_filled:
+            return False
         if self.auto_approve_tolerance_pct >= 100:
             return True
         if not line.qty_theoretical:
@@ -670,8 +696,7 @@ class StockCount(models.Model):
                     },
                 }
             to_apply = count.line_ids.filtered(lambda line: line.state == "approved")
-            for line in to_apply:
-                line._apply()
+            to_apply._apply()
             count._release_quants()
             count.write({"state": "done", "date_end": fields.Datetime.now()})
             adjusted = to_apply.filtered("move_line_ids")
@@ -704,6 +729,74 @@ class StockCount(models.Model):
             count.line_ids.unlink()
         self.write({"state": "draft", "date_start": False, "date_end": False})
         return True
+
+    def _add_unexpected_line(self, product, location, lot=None, quantity=0.0, **extra):
+        """Agrega al recuento un producto que no estaba previsto en esa ubicación y lo
+        deja contado por el usuario actual. Lo usan el asistente y la app."""
+        self.ensure_one()
+        lot = lot or self.env["stock.lot"]
+        if self.state not in ACTIVE_STATES:
+            raise UserError(self.env._("El recuento no está activo."))
+        if location not in self._get_count_locations():
+            raise UserError(self.env._("La ubicación no forma parte del recuento."))
+        if product.sudo().tracking != "none" and not lot:
+            raise UserError(self.env._("Este producto se controla por lote: indicá el lote."))
+        if quantity < 0:
+            raise UserError(self.env._("La cantidad no puede ser negativa."))
+        Line = self.env["stock.count.line"].sudo()
+        existing = Line.search_count(
+            [
+                ("count_id", "=", self.id),
+                ("product_id", "=", product.id),
+                ("location_id", "=", location.id),
+                ("lot_id", "=", lot.id),
+            ],
+            limit=1,
+        )
+        if existing:
+            raise UserError(
+                self.env._(
+                    "%s ya está en el recuento en esa ubicación: cargá la cantidad en su línea.",
+                    product.sudo().display_name,
+                )
+            )
+        vals = self._prepare_zero_line_vals(product, location, lot)
+        # Con sudo: el contador no ve las líneas de otros recuentos, pero el control de
+        # exclusividad tiene que verlas todas.
+        self.sudo()._check_no_overlapping_count([vals])
+        quant = (
+            self.env["stock.quant"].sudo()._gather(product, location, lot_id=lot, strict=True)[:1]
+        )
+        is_manager = self.env.user.has_group("stock_count.group_stock_count_manager")
+        reason = self.env.ref("stock_count.reason_unexpected", raise_if_not_found=False)
+        # Si el sistema sí tenía stock (producto fuera del alcance), el teórico es lo que
+        # dice el quant: la diferencia se mide contra eso. Si no había quant, es cero.
+        vals.update(
+            {
+                "quant_id": quant.id,
+                "qty_theoretical": quant.quantity if quant else 0.0,
+                "reason_id": reason.id if reason else False,
+                "assigned_user_id": False if is_manager else self.env.user.id,
+            }
+        )
+        vals.update(extra)
+        line = Line.create(vals)
+        if quant:
+            quant.count_line_id = line
+        line.with_user(self.env.user).write({"qty_counted": quantity})
+        self.sudo().message_post(
+            subtype_xmlid="mail.mt_note",
+            body=self.env._(
+                "Producto no esperado agregado por %(user)s: %(product)s en %(location)s, "
+                "%(qty)s %(uom)s.",
+                user=self.env.user.name,
+                product=product.sudo().display_name,
+                location=location.sudo().complete_name,
+                qty=quantity,
+                uom=product.sudo().uom_id.name,
+            ),
+        )
+        return line
 
     def _release_quants(self):
         self.ensure_one()

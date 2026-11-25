@@ -17,3 +17,6 @@ class ResConfigSettings(models.TransientModel):
     stock_count_auto_approve_pct = fields.Float(
         related="company_id.stock_count_auto_approve_pct", readonly=False
     )
+    stock_count_recount_min_value = fields.Float(
+        related="company_id.stock_count_recount_min_value", readonly=False
+    )

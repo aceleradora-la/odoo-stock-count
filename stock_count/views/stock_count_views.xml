@@ -58,6 +58,7 @@
                             <field name="recount_threshold_pct" readonly="state in ('done', 'cancel')"/>
                             <field name="recount_threshold_qty" readonly="state in ('done', 'cancel')"/>
                             <field name="auto_approve_tolerance_pct" readonly="state in ('done', 'cancel')"/>
+                            <field name="recount_min_value" readonly="state in ('done', 'cancel')"/>
                         </group>
                     </group>
                     <group name="stats" invisible="state == 'draft'">
@@ -95,6 +96,8 @@
                                     <field name="reason_id" optional="show" readonly="parent.state != 'review'"/>
                                     <field name="note" optional="hide" readonly="parent.state != 'review'"/>
                                     <field name="moved_during_count" optional="hide"/>
+                                    <field name="zero_filled" optional="hide"/>
+                                    <field name="unit_cost" optional="hide" invisible="blind and not parent.is_manager"/>
                                     <field name="state" widget="badge" decoration-info="state == 'counted'" decoration-warning="state == 'recount'" decoration-success="state in ('approved', 'applied')"/>
                                     <button name="action_approve" type="object" icon="fa-check" title="Aprobar" invisible="state != 'counted' or not parent.is_manager or parent.state != 'review'"/>
                                     <button name="action_accept_first_count" type="object" icon="fa-check-square-o" title="Aceptar 1er conteo sin recontar" invisible="state != 'recount' or not parent.is_manager or parent.state != 'review'"/>

@@ -22,7 +22,7 @@ registry.category("web_tour.tours").add("stock_count_counter_tour", {
         },
         {
             content: "Ubicación: sumar una unidad a la primera línea",
-            trigger: ".o_sc_line:first-child .o_sc_plus",
+            trigger: ".o_sc_line .o_sc_plus",
             run: "click",
         },
         {
