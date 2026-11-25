@@ -1,7 +1,7 @@
 {
     "name": "Recuento de inventario: conteo cíclico",
     "summary": "Reglas que crean recuentos automáticamente y asignan la tarea al responsable",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Inventory/Inventory",
     "author": "aceleradora.la",
     "website": "https://github.com/aceleradora-la/odoo-stock-count",

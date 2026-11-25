@@ -4,6 +4,7 @@ from datetime import timedelta
 from odoo import api, fields, models
 from odoo.addons.stock_count.models.res_company import LOCK_MODES
 from odoo.exceptions import UserError
+from odoo.tools.misc import formatLang
 
 _logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ class StockCountRule(models.Model):
             ("category", "Categoría de producto"),
             ("products", "Productos seleccionados"),
         ],
+        string="Productos a contar",
         default="all",
         required=True,
     )
@@ -320,10 +322,12 @@ class StockCountRule(models.Model):
     # ------------------------------------------------------------------
     # Tipos de regla
     # ------------------------------------------------------------------
-    def _run_periodic(self):
+    def _run_periodic(self, force=False):
+        """Genera el recuento periódico si llegó la fecha. `force` (botón Generar ahora)
+        lo genera aunque la fecha sea futura; el próximo se cuenta desde hoy."""
         self.ensure_one()
         today = fields.Date.context_today(self)
-        if self.next_date and self.next_date > today:
+        if not force and self.next_date and self.next_date > today:
             return self.env["stock.count"]
         count = self._create_count(
             self.location_ids,
@@ -488,20 +492,46 @@ class StockCountRule(models.Model):
                     "llega a cero al validar un movimiento."
                 )
             )
-        counts = self._run()
-        if not counts:
-            return {
-                "type": "ir.actions.client",
-                "tag": "display_notification",
-                "params": {
-                    "title": self.env._("Nada que contar"),
-                    "message": self.env._(
-                        "La regla no encontró ubicaciones que cumplan la condición hoy."
+        rule = self.with_company(self.company_id)
+        if self.rule_type == "periodic":
+            # El botón no espera a la fecha de "Próximo recuento". Solo evita duplicar
+            # un recuento de la regla que todavía está abierto.
+            active = self.count_ids.filtered(
+                lambda count: count.state in ("draft", "ready", "counting", "review")
+            )
+            if active:
+                return self._notify(
+                    self.env._("Ya hay un recuento abierto"),
+                    self.env._(
+                        "La regla ya generó %s y todavía no se validó. Terminalo o cancelalo "
+                        "para generar otro.",
+                        ", ".join(active.mapped("name")),
                     ),
-                    "type": "info",
-                },
-            }
-        return self.action_view_counts(counts)
+                    next_action=self.action_view_counts(active),
+                )
+            return self.action_view_counts(rule._run_periodic(force=True))
+        counts = rule._run()
+        if counts:
+            return self.action_view_counts(counts)
+        if self.rule_type == "turnover":
+            message = self.env._(
+                "Ninguna ubicación de la regla movió más de %s desde su último recuento, o "
+                "ya tiene un recuento reciente de esta regla.",
+                formatLang(self.env, self.turnover_threshold, currency_obj=self.currency_id),
+            )
+        else:
+            message = self.env._(
+                "Ninguna ubicación de la regla tiene recuentos validados con una precisión "
+                "menor a %s %%, o ya tiene un recuento reciente de esta regla.",
+                self.accuracy_threshold_pct,
+            )
+        return self._notify(self.env._("No se generó ningún recuento"), message)
+
+    def _notify(self, title, message, next_action=None):
+        params = {"title": title, "message": message, "type": "info", "sticky": bool(next_action)}
+        if next_action:
+            params["next"] = next_action
+        return {"type": "ir.actions.client", "tag": "display_notification", "params": params}
 
     def action_view_counts(self, counts=None):
         self.ensure_one()
