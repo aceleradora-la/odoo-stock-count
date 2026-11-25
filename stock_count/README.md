@@ -14,6 +14,7 @@ celular. Vista general e instalación en el [README del repositorio](../README.m
 | Inventario › Informes › **Análisis de recuentos** | Diferencias de los recuentos validados |
 | Inventario › Configuración › **Motivos de diferencia** | Motivos que se asignan a las diferencias |
 | Inventario › **Información general** | Tarjeta *Recuentos* de cada depósito: por contar, en revisión y en borrador |
+| **Tableros** › Logística › **Recuentos** | Tablero de los recuentos validados |
 
 ## Usuarios
 
@@ -188,8 +189,23 @@ ni el stock de los productos en recuento. El supervisor ve todo.
 **Precisión** es el porcentaje de líneas contadas sin diferencia o con una diferencia
 dentro de *Aprobar automáticamente hasta (%)*.
 
+## Tablero Recuentos
+
+La app Tableros trae el tablero **Recuentos** (sección Logística), visible para el grupo
+Supervisor. Lee las líneas de los recuentos validados.
+
+- **Filtros:** período (fecha planificada del recuento), depósito, categoría de producto y
+  producto.
+- **Tarjetas:** recuentos validados, precisión, sobrantes, faltantes y neto en pesos, cada
+  una comparada con el período anterior.
+- **Gráficos:** sobrantes y faltantes por mes, y precisión por mes.
+- **Tablas:** recuentos por mes, los 10 productos y las 10 ubicaciones con mayor
+  diferencia en valor, y diferencias por motivo.
+
+El archivo del tablero se genera con `tools/gen_dashboard.py`.
+
 ## Datos técnicos
 
 - Modelos: `stock.count`, `stock.count.line`, `stock.count.reason`.
-- Dependencias: `stock`, `mail`, `barcodes`. Python: `xlsxwriter`.
+- Dependencias: `stock`, `mail`, `barcodes`, `spreadsheet_dashboard`. Python: `xlsxwriter`.
 - Tests: `odoo -d <base> -i stock_count --test-enable --test-tags /stock_count --stop-after-init`.

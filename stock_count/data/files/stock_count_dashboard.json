@@ -1,0 +1,1971 @@
+{
+ "version": 21,
+ "sheets": [
+  {
+   "conditionalFormats": [
+    {
+     "id": "db_prod",
+     "ranges": [
+      "A36:A45"
+     ],
+     "rule": {
+      "type": "DataBarRule",
+      "color": 16775149,
+      "rangeValues": "G36:G45"
+     }
+    },
+    {
+     "id": "db_reason",
+     "ranges": [
+      "A49:A56"
+     ],
+     "rule": {
+      "type": "DataBarRule",
+      "color": 16775149,
+      "rangeValues": "F49:F56"
+     }
+    },
+    {
+     "id": "db_loc",
+     "ranges": [
+      "A60:A69"
+     ],
+     "rule": {
+      "type": "DataBarRule",
+      "color": 15726335,
+      "rangeValues": "E60:E69"
+     }
+    },
+    {
+     "id": "cf_neg",
+     "ranges": [
+      "G20:G32",
+      "F36:F45",
+      "E49:E56",
+      "C36:C45"
+     ],
+     "rule": {
+      "type": "CellIsRule",
+      "operator": "isLessThan",
+      "values": [
+       "0"
+      ],
+      "style": {
+       "textColor": "#C0392B"
+      }
+     }
+    },
+    {
+     "id": "cf_pos",
+     "ranges": [
+      "G20:G32",
+      "F36:F45",
+      "E49:E56",
+      "C36:C45"
+     ],
+     "rule": {
+      "type": "CellIsRule",
+      "operator": "isGreaterThan",
+      "values": [
+       "0"
+      ],
+      "style": {
+       "textColor": "#1E7F4F"
+      }
+     }
+    }
+   ],
+   "dataValidationRules": [],
+   "figures": [
+    {
+     "id": "kpi_recuentos",
+     "x": 0,
+     "y": 48,
+     "width": 213,
+     "height": 101,
+     "tag": "chart",
+     "data": {
+      "type": "scorecard",
+      "title": {
+       "text": "Recuentos validados",
+       "bold": true,
+       "color": "#434343"
+      },
+      "keyValue": "Datos!B2",
+      "baseline": "Datos!C2",
+      "baselineDescr": "vs anterior",
+      "background": "#F1F5F4",
+      "humanize": true,
+      "baselineMode": "percentage",
+      "baselineColorUp": "#00A04A",
+      "baselineColorDown": "#DC6965"
+     }
+    },
+    {
+     "id": "kpi_precision",
+     "x": 223,
+     "y": 48,
+     "width": 213,
+     "height": 101,
+     "tag": "chart",
+     "data": {
+      "type": "scorecard",
+      "title": {
+       "text": "Precisión",
+       "bold": true,
+       "color": "#434343"
+      },
+      "keyValue": "Datos!B5",
+      "baseline": "Datos!C5",
+      "baselineDescr": "vs anterior",
+      "background": "#EFF6FF",
+      "humanize": true,
+      "baselineMode": "difference",
+      "baselineColorUp": "#00A04A",
+      "baselineColorDown": "#DC6965"
+     }
+    },
+    {
+     "id": "kpi_sobrantes",
+     "x": 446,
+     "y": 48,
+     "width": 213,
+     "height": 101,
+     "tag": "chart",
+     "data": {
+      "type": "scorecard",
+      "title": {
+       "text": "Sobrantes $",
+       "bold": true,
+       "color": "#434343"
+      },
+      "keyValue": "Datos!B6",
+      "baseline": "Datos!C6",
+      "baselineDescr": "vs anterior",
+      "background": "#EDF7F1",
+      "humanize": true,
+      "baselineMode": "percentage",
+      "baselineColorUp": "#DC6965",
+      "baselineColorDown": "#00A04A"
+     }
+    },
+    {
+     "id": "kpi_faltantes",
+     "x": 669,
+     "y": 48,
+     "width": 213,
+     "height": 101,
+     "tag": "chart",
+     "data": {
+      "type": "scorecard",
+      "title": {
+       "text": "Faltantes $",
+       "bold": true,
+       "color": "#434343"
+      },
+      "keyValue": "Datos!B7",
+      "baseline": "Datos!C7",
+      "baselineDescr": "vs anterior",
+      "background": "#FCEBEB",
+      "humanize": true,
+      "baselineMode": "percentage",
+      "baselineColorUp": "#DC6965",
+      "baselineColorDown": "#00A04A"
+     }
+    },
+    {
+     "id": "kpi_neto",
+     "x": 892,
+     "y": 48,
+     "width": 213,
+     "height": 101,
+     "tag": "chart",
+     "data": {
+      "type": "scorecard",
+      "title": {
+       "text": "Neto $",
+       "bold": true,
+       "color": "#434343"
+      },
+      "keyValue": "Datos!B8",
+      "baseline": "Datos!C8",
+      "baselineDescr": "vs anterior",
+      "background": "#FFF7ED",
+      "humanize": true,
+      "baselineMode": "difference",
+      "baselineColorUp": "#00A04A",
+      "baselineColorDown": "#DC6965"
+     }
+    },
+    {
+     "id": "chart_valor",
+     "x": 0,
+     "y": 160,
+     "width": 547,
+     "height": 240,
+     "tag": "chart",
+     "data": {
+      "type": "bar",
+      "title": {
+       "text": "Sobrantes y faltantes $ por mes",
+       "bold": true,
+       "color": "#434343"
+      },
+      "dataSets": [
+       {
+        "dataRange": "Recuentos!E21:E32",
+        "label": "Sobrantes $",
+        "backgroundColor": "#1D9E75"
+       },
+       {
+        "dataRange": "Recuentos!F21:F32",
+        "label": "Faltantes $",
+        "backgroundColor": "#D85A30"
+       }
+      ],
+      "labelRange": "Recuentos!A21:A32",
+      "dataSetsHaveTitle": false,
+      "stacked": false,
+      "background": "#FFFFFF",
+      "legendPosition": "bottom"
+     }
+    },
+    {
+     "id": "chart_precision",
+     "x": 557,
+     "y": 160,
+     "width": 547,
+     "height": 240,
+     "tag": "chart",
+     "data": {
+      "type": "line",
+      "title": {
+       "text": "Precisión por mes",
+       "bold": true,
+       "color": "#434343"
+      },
+      "dataSets": [
+       {
+        "dataRange": "Recuentos!D21:D32",
+        "label": "Precisión",
+        "backgroundColor": "#01666B"
+       }
+      ],
+      "labelRange": "Recuentos!A21:A32",
+      "dataSetsHaveTitle": false,
+      "stacked": false,
+      "background": "#FFFFFF",
+      "legendPosition": "none",
+      "labelsAsText": true,
+      "cumulative": false
+     }
+    }
+   ],
+   "tables": [],
+   "isVisible": true,
+   "headerGroups": {
+    "ROW": [],
+    "COL": []
+   },
+   "comments": {},
+   "id": "sheet1",
+   "name": "Recuentos",
+   "colNumber": 8,
+   "rowNumber": 84,
+   "rows": {
+    "0": {
+     "size": 40
+    },
+    "17": {
+     "size": 36
+    },
+    "33": {
+     "size": 36
+    },
+    "46": {
+     "size": 36
+    },
+    "57": {
+     "size": 36
+    }
+   },
+   "cols": {
+    "0": {
+     "size": 300
+    },
+    "1": {
+     "size": 110
+    },
+    "2": {
+     "size": 140
+    },
+    "3": {
+     "size": 140
+    },
+    "4": {
+     "size": 150
+    },
+    "5": {
+     "size": 150
+    },
+    "6": {
+     "size": 120
+    }
+   },
+   "merges": [
+    "A1:G1",
+    "A71:G71",
+    "A72:G72",
+    "A73:G73",
+    "A74:G74"
+   ],
+   "cells": {
+    "A1": {
+     "content": "=_t(\"Recuentos de inventario\")"
+    },
+    "A18": {
+     "content": "=_t(\"Recuentos por mes\")"
+    },
+    "A19": {
+     "content": "=_t(\"Mes\")"
+    },
+    "B19": {
+     "content": "=_t(\"Recuentos\")"
+    },
+    "C19": {
+     "content": "=_t(\"Líneas\")"
+    },
+    "D19": {
+     "content": "=_t(\"Precisión\")"
+    },
+    "E19": {
+     "content": "=_t(\"Sobrantes $\")"
+    },
+    "F19": {
+     "content": "=_t(\"Faltantes $\")"
+    },
+    "G19": {
+     "content": "=_t(\"Neto $\")"
+    },
+    "A20": {
+     "content": "=_t(\"Total del período\")"
+    },
+    "B20": {
+     "content": "=Datos!B2"
+    },
+    "C20": {
+     "content": "=SUM($C$21:$C$32)"
+    },
+    "D20": {
+     "content": "=Datos!B5"
+    },
+    "E20": {
+     "content": "=SUM($E$21:$E$32)"
+    },
+    "F20": {
+     "content": "=SUM($F$21:$F$32)"
+    },
+    "G20": {
+     "content": "=SUM($G$21:$G$32)"
+    },
+    "A21": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",1),\"\")"
+    },
+    "B21": {
+     "content": "=IF($A21=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",1)+0,0))"
+    },
+    "C21": {
+     "content": "=IF($A21=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",1)+0,0))"
+    },
+    "D21": {
+     "content": "=IF($A21=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",1,\"is_accurate\",TRUE)+0,0)/C21,\"\"))"
+    },
+    "E21": {
+     "content": "=IF($A21=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",1,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F21": {
+     "content": "=IF($A21=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",1,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G21": {
+     "content": "=IF($A21=\"\",\"\",E21-F21)"
+    },
+    "A22": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",2),\"\")"
+    },
+    "B22": {
+     "content": "=IF($A22=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",2)+0,0))"
+    },
+    "C22": {
+     "content": "=IF($A22=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",2)+0,0))"
+    },
+    "D22": {
+     "content": "=IF($A22=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",2,\"is_accurate\",TRUE)+0,0)/C22,\"\"))"
+    },
+    "E22": {
+     "content": "=IF($A22=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",2,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F22": {
+     "content": "=IF($A22=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",2,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G22": {
+     "content": "=IF($A22=\"\",\"\",E22-F22)"
+    },
+    "A23": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",3),\"\")"
+    },
+    "B23": {
+     "content": "=IF($A23=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",3)+0,0))"
+    },
+    "C23": {
+     "content": "=IF($A23=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",3)+0,0))"
+    },
+    "D23": {
+     "content": "=IF($A23=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",3,\"is_accurate\",TRUE)+0,0)/C23,\"\"))"
+    },
+    "E23": {
+     "content": "=IF($A23=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",3,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F23": {
+     "content": "=IF($A23=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",3,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G23": {
+     "content": "=IF($A23=\"\",\"\",E23-F23)"
+    },
+    "A24": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",4),\"\")"
+    },
+    "B24": {
+     "content": "=IF($A24=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",4)+0,0))"
+    },
+    "C24": {
+     "content": "=IF($A24=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",4)+0,0))"
+    },
+    "D24": {
+     "content": "=IF($A24=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",4,\"is_accurate\",TRUE)+0,0)/C24,\"\"))"
+    },
+    "E24": {
+     "content": "=IF($A24=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",4,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F24": {
+     "content": "=IF($A24=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",4,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G24": {
+     "content": "=IF($A24=\"\",\"\",E24-F24)"
+    },
+    "A25": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",5),\"\")"
+    },
+    "B25": {
+     "content": "=IF($A25=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",5)+0,0))"
+    },
+    "C25": {
+     "content": "=IF($A25=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",5)+0,0))"
+    },
+    "D25": {
+     "content": "=IF($A25=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",5,\"is_accurate\",TRUE)+0,0)/C25,\"\"))"
+    },
+    "E25": {
+     "content": "=IF($A25=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",5,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F25": {
+     "content": "=IF($A25=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",5,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G25": {
+     "content": "=IF($A25=\"\",\"\",E25-F25)"
+    },
+    "A26": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",6),\"\")"
+    },
+    "B26": {
+     "content": "=IF($A26=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",6)+0,0))"
+    },
+    "C26": {
+     "content": "=IF($A26=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",6)+0,0))"
+    },
+    "D26": {
+     "content": "=IF($A26=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",6,\"is_accurate\",TRUE)+0,0)/C26,\"\"))"
+    },
+    "E26": {
+     "content": "=IF($A26=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",6,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F26": {
+     "content": "=IF($A26=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",6,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G26": {
+     "content": "=IF($A26=\"\",\"\",E26-F26)"
+    },
+    "A27": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",7),\"\")"
+    },
+    "B27": {
+     "content": "=IF($A27=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",7)+0,0))"
+    },
+    "C27": {
+     "content": "=IF($A27=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",7)+0,0))"
+    },
+    "D27": {
+     "content": "=IF($A27=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",7,\"is_accurate\",TRUE)+0,0)/C27,\"\"))"
+    },
+    "E27": {
+     "content": "=IF($A27=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",7,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F27": {
+     "content": "=IF($A27=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",7,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G27": {
+     "content": "=IF($A27=\"\",\"\",E27-F27)"
+    },
+    "A28": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",8),\"\")"
+    },
+    "B28": {
+     "content": "=IF($A28=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",8)+0,0))"
+    },
+    "C28": {
+     "content": "=IF($A28=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",8)+0,0))"
+    },
+    "D28": {
+     "content": "=IF($A28=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",8,\"is_accurate\",TRUE)+0,0)/C28,\"\"))"
+    },
+    "E28": {
+     "content": "=IF($A28=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",8,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F28": {
+     "content": "=IF($A28=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",8,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G28": {
+     "content": "=IF($A28=\"\",\"\",E28-F28)"
+    },
+    "A29": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",9),\"\")"
+    },
+    "B29": {
+     "content": "=IF($A29=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",9)+0,0))"
+    },
+    "C29": {
+     "content": "=IF($A29=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",9)+0,0))"
+    },
+    "D29": {
+     "content": "=IF($A29=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",9,\"is_accurate\",TRUE)+0,0)/C29,\"\"))"
+    },
+    "E29": {
+     "content": "=IF($A29=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",9,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F29": {
+     "content": "=IF($A29=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",9,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G29": {
+     "content": "=IF($A29=\"\",\"\",E29-F29)"
+    },
+    "A30": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",10),\"\")"
+    },
+    "B30": {
+     "content": "=IF($A30=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",10)+0,0))"
+    },
+    "C30": {
+     "content": "=IF($A30=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",10)+0,0))"
+    },
+    "D30": {
+     "content": "=IF($A30=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",10,\"is_accurate\",TRUE)+0,0)/C30,\"\"))"
+    },
+    "E30": {
+     "content": "=IF($A30=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",10,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F30": {
+     "content": "=IF($A30=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",10,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G30": {
+     "content": "=IF($A30=\"\",\"\",E30-F30)"
+    },
+    "A31": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",11),\"\")"
+    },
+    "B31": {
+     "content": "=IF($A31=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",11)+0,0))"
+    },
+    "C31": {
+     "content": "=IF($A31=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",11)+0,0))"
+    },
+    "D31": {
+     "content": "=IF($A31=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",11,\"is_accurate\",TRUE)+0,0)/C31,\"\"))"
+    },
+    "E31": {
+     "content": "=IF($A31=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",11,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F31": {
+     "content": "=IF($A31=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",11,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G31": {
+     "content": "=IF($A31=\"\",\"\",E31-F31)"
+    },
+    "A32": {
+     "content": "=IFERROR(PIVOT.HEADER(1,\"#count_date:month\",12),\"\")"
+    },
+    "B32": {
+     "content": "=IF($A32=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\",\"#count_date:month\",12)+0,0))"
+    },
+    "C32": {
+     "content": "=IF($A32=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"__count\",\"#count_date:month\",12)+0,0))"
+    },
+    "D32": {
+     "content": "=IF($A32=\"\",\"\",IFERROR(IFERROR(PIVOT.VALUE(3,\"__count\",\"#count_date:month\",12,\"is_accurate\",TRUE)+0,0)/C32,\"\"))"
+    },
+    "E32": {
+     "content": "=IF($A32=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",12,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "F32": {
+     "content": "=IF($A32=\"\",\"\",IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"#count_date:month\",12,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "G32": {
+     "content": "=IF($A32=\"\",\"\",E32-F32)"
+    },
+    "A34": {
+     "content": "=_t(\"Los 10 productos con mayor diferencia en valor\")"
+    },
+    "A35": {
+     "content": "=_t(\"Producto\")"
+    },
+    "B35": {
+     "content": "=_t(\"Líneas\")"
+    },
+    "C35": {
+     "content": "=_t(\"Dif. en cantidad\")"
+    },
+    "D35": {
+     "content": "=_t(\"Sobrantes $\")"
+    },
+    "E35": {
+     "content": "=_t(\"Faltantes $\")"
+    },
+    "F35": {
+     "content": "=_t(\"Neto $\")"
+    },
+    "G35": {
+     "content": "=_t(\"% del total\")"
+    },
+    "A36": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",1),\"\")"
+    },
+    "B36": {
+     "content": "=IF($A36=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",1)+0,0))"
+    },
+    "C36": {
+     "content": "=IF($A36=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",1)+0,0))"
+    },
+    "D36": {
+     "content": "=IF($A36=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",1,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E36": {
+     "content": "=IF($A36=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",1,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F36": {
+     "content": "=IF($A36=\"\",\"\",D36-E36)"
+    },
+    "G36": {
+     "content": "=IF($A36=\"\",\"\",IFERROR((D36+E36)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A37": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",2),\"\")"
+    },
+    "B37": {
+     "content": "=IF($A37=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",2)+0,0))"
+    },
+    "C37": {
+     "content": "=IF($A37=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",2)+0,0))"
+    },
+    "D37": {
+     "content": "=IF($A37=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",2,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E37": {
+     "content": "=IF($A37=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",2,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F37": {
+     "content": "=IF($A37=\"\",\"\",D37-E37)"
+    },
+    "G37": {
+     "content": "=IF($A37=\"\",\"\",IFERROR((D37+E37)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A38": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",3),\"\")"
+    },
+    "B38": {
+     "content": "=IF($A38=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",3)+0,0))"
+    },
+    "C38": {
+     "content": "=IF($A38=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",3)+0,0))"
+    },
+    "D38": {
+     "content": "=IF($A38=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",3,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E38": {
+     "content": "=IF($A38=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",3,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F38": {
+     "content": "=IF($A38=\"\",\"\",D38-E38)"
+    },
+    "G38": {
+     "content": "=IF($A38=\"\",\"\",IFERROR((D38+E38)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A39": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",4),\"\")"
+    },
+    "B39": {
+     "content": "=IF($A39=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",4)+0,0))"
+    },
+    "C39": {
+     "content": "=IF($A39=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",4)+0,0))"
+    },
+    "D39": {
+     "content": "=IF($A39=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",4,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E39": {
+     "content": "=IF($A39=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",4,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F39": {
+     "content": "=IF($A39=\"\",\"\",D39-E39)"
+    },
+    "G39": {
+     "content": "=IF($A39=\"\",\"\",IFERROR((D39+E39)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A40": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",5),\"\")"
+    },
+    "B40": {
+     "content": "=IF($A40=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",5)+0,0))"
+    },
+    "C40": {
+     "content": "=IF($A40=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",5)+0,0))"
+    },
+    "D40": {
+     "content": "=IF($A40=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",5,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E40": {
+     "content": "=IF($A40=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",5,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F40": {
+     "content": "=IF($A40=\"\",\"\",D40-E40)"
+    },
+    "G40": {
+     "content": "=IF($A40=\"\",\"\",IFERROR((D40+E40)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A41": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",6),\"\")"
+    },
+    "B41": {
+     "content": "=IF($A41=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",6)+0,0))"
+    },
+    "C41": {
+     "content": "=IF($A41=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",6)+0,0))"
+    },
+    "D41": {
+     "content": "=IF($A41=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",6,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E41": {
+     "content": "=IF($A41=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",6,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F41": {
+     "content": "=IF($A41=\"\",\"\",D41-E41)"
+    },
+    "G41": {
+     "content": "=IF($A41=\"\",\"\",IFERROR((D41+E41)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A42": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",7),\"\")"
+    },
+    "B42": {
+     "content": "=IF($A42=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",7)+0,0))"
+    },
+    "C42": {
+     "content": "=IF($A42=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",7)+0,0))"
+    },
+    "D42": {
+     "content": "=IF($A42=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",7,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E42": {
+     "content": "=IF($A42=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",7,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F42": {
+     "content": "=IF($A42=\"\",\"\",D42-E42)"
+    },
+    "G42": {
+     "content": "=IF($A42=\"\",\"\",IFERROR((D42+E42)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A43": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",8),\"\")"
+    },
+    "B43": {
+     "content": "=IF($A43=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",8)+0,0))"
+    },
+    "C43": {
+     "content": "=IF($A43=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",8)+0,0))"
+    },
+    "D43": {
+     "content": "=IF($A43=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",8,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E43": {
+     "content": "=IF($A43=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",8,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F43": {
+     "content": "=IF($A43=\"\",\"\",D43-E43)"
+    },
+    "G43": {
+     "content": "=IF($A43=\"\",\"\",IFERROR((D43+E43)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A44": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",9),\"\")"
+    },
+    "B44": {
+     "content": "=IF($A44=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",9)+0,0))"
+    },
+    "C44": {
+     "content": "=IF($A44=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",9)+0,0))"
+    },
+    "D44": {
+     "content": "=IF($A44=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",9,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E44": {
+     "content": "=IF($A44=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",9,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F44": {
+     "content": "=IF($A44=\"\",\"\",D44-E44)"
+    },
+    "G44": {
+     "content": "=IF($A44=\"\",\"\",IFERROR((D44+E44)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A45": {
+     "content": "=IFERROR(PIVOT.HEADER(5,\"#product_id\",10),\"\")"
+    },
+    "B45": {
+     "content": "=IF($A45=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"__count\",\"#product_id\",10)+0,0))"
+    },
+    "C45": {
+     "content": "=IF($A45=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"qty_diff\",\"#product_id\",10)+0,0))"
+    },
+    "D45": {
+     "content": "=IF($A45=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",10,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "E45": {
+     "content": "=IF($A45=\"\",\"\",IFERROR(PIVOT.VALUE(5,\"diff_value_abs\",\"#product_id\",10,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "F45": {
+     "content": "=IF($A45=\"\",\"\",D45-E45)"
+    },
+    "G45": {
+     "content": "=IF($A45=\"\",\"\",IFERROR((D45+E45)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A47": {
+     "content": "=_t(\"Diferencias por motivo\")"
+    },
+    "A48": {
+     "content": "=_t(\"Motivo\")"
+    },
+    "B48": {
+     "content": "=_t(\"Líneas\")"
+    },
+    "C48": {
+     "content": "=_t(\"Sobrantes $\")"
+    },
+    "D48": {
+     "content": "=_t(\"Faltantes $\")"
+    },
+    "E48": {
+     "content": "=_t(\"Neto $\")"
+    },
+    "F48": {
+     "content": "=_t(\"% del total\")"
+    },
+    "A49": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",1),\"\")"
+    },
+    "B49": {
+     "content": "=IF($A49=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",1)+0,0))"
+    },
+    "C49": {
+     "content": "=IF($A49=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",1,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D49": {
+     "content": "=IF($A49=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",1,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E49": {
+     "content": "=IF($A49=\"\",\"\",C49-D49)"
+    },
+    "F49": {
+     "content": "=IF($A49=\"\",\"\",IFERROR((C49+D49)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A50": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",2),\"\")"
+    },
+    "B50": {
+     "content": "=IF($A50=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",2)+0,0))"
+    },
+    "C50": {
+     "content": "=IF($A50=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",2,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D50": {
+     "content": "=IF($A50=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",2,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E50": {
+     "content": "=IF($A50=\"\",\"\",C50-D50)"
+    },
+    "F50": {
+     "content": "=IF($A50=\"\",\"\",IFERROR((C50+D50)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A51": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",3),\"\")"
+    },
+    "B51": {
+     "content": "=IF($A51=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",3)+0,0))"
+    },
+    "C51": {
+     "content": "=IF($A51=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",3,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D51": {
+     "content": "=IF($A51=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",3,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E51": {
+     "content": "=IF($A51=\"\",\"\",C51-D51)"
+    },
+    "F51": {
+     "content": "=IF($A51=\"\",\"\",IFERROR((C51+D51)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A52": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",4),\"\")"
+    },
+    "B52": {
+     "content": "=IF($A52=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",4)+0,0))"
+    },
+    "C52": {
+     "content": "=IF($A52=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",4,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D52": {
+     "content": "=IF($A52=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",4,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E52": {
+     "content": "=IF($A52=\"\",\"\",C52-D52)"
+    },
+    "F52": {
+     "content": "=IF($A52=\"\",\"\",IFERROR((C52+D52)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A53": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",5),\"\")"
+    },
+    "B53": {
+     "content": "=IF($A53=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",5)+0,0))"
+    },
+    "C53": {
+     "content": "=IF($A53=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",5,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D53": {
+     "content": "=IF($A53=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",5,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E53": {
+     "content": "=IF($A53=\"\",\"\",C53-D53)"
+    },
+    "F53": {
+     "content": "=IF($A53=\"\",\"\",IFERROR((C53+D53)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A54": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",6),\"\")"
+    },
+    "B54": {
+     "content": "=IF($A54=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",6)+0,0))"
+    },
+    "C54": {
+     "content": "=IF($A54=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",6,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D54": {
+     "content": "=IF($A54=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",6,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E54": {
+     "content": "=IF($A54=\"\",\"\",C54-D54)"
+    },
+    "F54": {
+     "content": "=IF($A54=\"\",\"\",IFERROR((C54+D54)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A55": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",7),\"\")"
+    },
+    "B55": {
+     "content": "=IF($A55=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",7)+0,0))"
+    },
+    "C55": {
+     "content": "=IF($A55=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",7,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D55": {
+     "content": "=IF($A55=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",7,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E55": {
+     "content": "=IF($A55=\"\",\"\",C55-D55)"
+    },
+    "F55": {
+     "content": "=IF($A55=\"\",\"\",IFERROR((C55+D55)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A56": {
+     "content": "=IFERROR(PIVOT.HEADER(6,\"#reason_id\",8),\"\")"
+    },
+    "B56": {
+     "content": "=IF($A56=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"__count\",\"#reason_id\",8)+0,0))"
+    },
+    "C56": {
+     "content": "=IF($A56=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",8,\"diff_type\",\"surplus\")+0,0))"
+    },
+    "D56": {
+     "content": "=IF($A56=\"\",\"\",IFERROR(PIVOT.VALUE(6,\"diff_value_abs\",\"#reason_id\",8,\"diff_type\",\"shortage\")+0,0))"
+    },
+    "E56": {
+     "content": "=IF($A56=\"\",\"\",C56-D56)"
+    },
+    "F56": {
+     "content": "=IF($A56=\"\",\"\",IFERROR((C56+D56)/(Datos!$B$6+Datos!$B$7),\"\"))"
+    },
+    "A58": {
+     "content": "=_t(\"Las 10 ubicaciones con mayor diferencia en valor\")"
+    },
+    "A59": {
+     "content": "=_t(\"Ubicación\")"
+    },
+    "B59": {
+     "content": "=_t(\"Líneas\")"
+    },
+    "C59": {
+     "content": "=_t(\"Fuera de tolerancia\")"
+    },
+    "D59": {
+     "content": "=_t(\"Precisión\")"
+    },
+    "E59": {
+     "content": "=_t(\"Diferencia absoluta $\")"
+    },
+    "A60": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",1),\"\")"
+    },
+    "B60": {
+     "content": "=IF($A60=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",1)+0,0))"
+    },
+    "C60": {
+     "content": "=IF($A60=\"\",\"\",B60-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",1,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D60": {
+     "content": "=IF($A60=\"\",\"\",IFERROR(1-C60/B60,\"\"))"
+    },
+    "E60": {
+     "content": "=IF($A60=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",1)+0,0))"
+    },
+    "A61": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",2),\"\")"
+    },
+    "B61": {
+     "content": "=IF($A61=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",2)+0,0))"
+    },
+    "C61": {
+     "content": "=IF($A61=\"\",\"\",B61-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",2,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D61": {
+     "content": "=IF($A61=\"\",\"\",IFERROR(1-C61/B61,\"\"))"
+    },
+    "E61": {
+     "content": "=IF($A61=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",2)+0,0))"
+    },
+    "A62": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",3),\"\")"
+    },
+    "B62": {
+     "content": "=IF($A62=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",3)+0,0))"
+    },
+    "C62": {
+     "content": "=IF($A62=\"\",\"\",B62-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",3,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D62": {
+     "content": "=IF($A62=\"\",\"\",IFERROR(1-C62/B62,\"\"))"
+    },
+    "E62": {
+     "content": "=IF($A62=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",3)+0,0))"
+    },
+    "A63": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",4),\"\")"
+    },
+    "B63": {
+     "content": "=IF($A63=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",4)+0,0))"
+    },
+    "C63": {
+     "content": "=IF($A63=\"\",\"\",B63-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",4,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D63": {
+     "content": "=IF($A63=\"\",\"\",IFERROR(1-C63/B63,\"\"))"
+    },
+    "E63": {
+     "content": "=IF($A63=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",4)+0,0))"
+    },
+    "A64": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",5),\"\")"
+    },
+    "B64": {
+     "content": "=IF($A64=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",5)+0,0))"
+    },
+    "C64": {
+     "content": "=IF($A64=\"\",\"\",B64-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",5,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D64": {
+     "content": "=IF($A64=\"\",\"\",IFERROR(1-C64/B64,\"\"))"
+    },
+    "E64": {
+     "content": "=IF($A64=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",5)+0,0))"
+    },
+    "A65": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",6),\"\")"
+    },
+    "B65": {
+     "content": "=IF($A65=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",6)+0,0))"
+    },
+    "C65": {
+     "content": "=IF($A65=\"\",\"\",B65-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",6,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D65": {
+     "content": "=IF($A65=\"\",\"\",IFERROR(1-C65/B65,\"\"))"
+    },
+    "E65": {
+     "content": "=IF($A65=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",6)+0,0))"
+    },
+    "A66": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",7),\"\")"
+    },
+    "B66": {
+     "content": "=IF($A66=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",7)+0,0))"
+    },
+    "C66": {
+     "content": "=IF($A66=\"\",\"\",B66-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",7,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D66": {
+     "content": "=IF($A66=\"\",\"\",IFERROR(1-C66/B66,\"\"))"
+    },
+    "E66": {
+     "content": "=IF($A66=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",7)+0,0))"
+    },
+    "A67": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",8),\"\")"
+    },
+    "B67": {
+     "content": "=IF($A67=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",8)+0,0))"
+    },
+    "C67": {
+     "content": "=IF($A67=\"\",\"\",B67-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",8,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D67": {
+     "content": "=IF($A67=\"\",\"\",IFERROR(1-C67/B67,\"\"))"
+    },
+    "E67": {
+     "content": "=IF($A67=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",8)+0,0))"
+    },
+    "A68": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",9),\"\")"
+    },
+    "B68": {
+     "content": "=IF($A68=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",9)+0,0))"
+    },
+    "C68": {
+     "content": "=IF($A68=\"\",\"\",B68-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",9,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D68": {
+     "content": "=IF($A68=\"\",\"\",IFERROR(1-C68/B68,\"\"))"
+    },
+    "E68": {
+     "content": "=IF($A68=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",9)+0,0))"
+    },
+    "A69": {
+     "content": "=IFERROR(PIVOT.HEADER(7,\"#location_id\",10),\"\")"
+    },
+    "B69": {
+     "content": "=IF($A69=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",10)+0,0))"
+    },
+    "C69": {
+     "content": "=IF($A69=\"\",\"\",B69-IFERROR(PIVOT.VALUE(7,\"__count\",\"#location_id\",10,\"is_accurate\",TRUE)+0,0))"
+    },
+    "D69": {
+     "content": "=IF($A69=\"\",\"\",IFERROR(1-C69/B69,\"\"))"
+    },
+    "E69": {
+     "content": "=IF($A69=\"\",\"\",IFERROR(PIVOT.VALUE(7,\"diff_value_abs\",\"#location_id\",10)+0,0))"
+    },
+    "A71": {
+     "content": "=_t(\"Cómo usar: elegí el Período (año, trimestre o mes) y, si querés, un Depósito, una Categoría de producto o un Producto. Toma las líneas de los recuentos validados, por la fecha planificada del recuento.\")"
+    },
+    "A72": {
+     "content": "=_t(\"Precisión: líneas contadas sin diferencia o con una diferencia dentro de la tolerancia de aprobación del recuento, sobre el total de líneas contadas.\")"
+    },
+    "A73": {
+     "content": "=_t(\"Sobrantes: el conteo dio más que el sistema. Faltantes: dio menos. Los importes son la diferencia valorizada al costo del producto al validar el recuento.\")"
+    },
+    "A74": {
+     "content": "=_t(\"Las tarjetas comparan contra el período anterior (mes, trimestre o año anterior, según lo elegido). La grilla muestra hasta 12 meses.\")"
+    }
+   },
+   "styles": {
+    "A1": 1,
+    "A71:A74": 2,
+    "A18": 6,
+    "A19:G19": 7,
+    "A21:A32": 8,
+    "B21:G32": 9,
+    "A34": 6,
+    "A35:G35": 7,
+    "A36:A45": 8,
+    "B36:G45": 9,
+    "A47": 6,
+    "A48:F48": 7,
+    "A49:A56": 8,
+    "B49:F56": 9,
+    "A58": 6,
+    "A59:E59": 7,
+    "A60:A69": 8,
+    "B60:E69": 9,
+    "A20:G20": 10
+   },
+   "formats": {
+    "A21:A32": 2,
+    "B20:C32": 4,
+    "D20:D32": 3,
+    "E20:G32": 1,
+    "B36:B45": 4,
+    "C36:F45": 1,
+    "G36:G45": 3,
+    "B49:B56": 4,
+    "C49:E56": 1,
+    "F49:F56": 3,
+    "B60:C69": 4,
+    "D60:D69": 3,
+    "E60:E69": 1
+   },
+   "borders": {
+    "A18:G18": 1,
+    "A34:G34": 1,
+    "A47:F47": 1,
+    "A58:E58": 1
+   },
+   "areGridLinesVisible": false
+  },
+  {
+   "conditionalFormats": [],
+   "dataValidationRules": [],
+   "figures": [],
+   "tables": [],
+   "isVisible": true,
+   "headerGroups": {
+    "ROW": [],
+    "COL": []
+   },
+   "comments": {},
+   "id": "sheet2",
+   "name": "Datos",
+   "colNumber": 10,
+   "rowNumber": 30,
+   "rows": {},
+   "cols": {
+    "0": {
+     "size": 260
+    },
+    "1": {
+     "size": 150
+    },
+    "2": {
+     "size": 150
+    }
+   },
+   "merges": [],
+   "cells": {
+    "A1": {
+     "content": "=_t(\"KPIs (según filtros)\")"
+    },
+    "B1": {
+     "content": "=_t(\"Período elegido\")"
+    },
+    "C1": {
+     "content": "=_t(\"Período anterior\")"
+    },
+    "A2": {
+     "content": "=_t(\"Recuentos validados\")"
+    },
+    "A3": {
+     "content": "=_t(\"Líneas contadas\")"
+    },
+    "A4": {
+     "content": "=_t(\"Líneas dentro de la tolerancia\")"
+    },
+    "A5": {
+     "content": "=_t(\"Precisión\")"
+    },
+    "A6": {
+     "content": "=_t(\"Sobrantes $\")"
+    },
+    "A7": {
+     "content": "=_t(\"Faltantes $ (en positivo)\")"
+    },
+    "A8": {
+     "content": "=_t(\"Neto $ (sobrantes - faltantes)\")"
+    },
+    "A10": {
+     "content": "=_t(\"Notas del cálculo:\")"
+    },
+    "A11": {
+     "content": "=_t(\"Fuente: líneas de recuento validadas (recuento en estado Validado). Período = fecha planificada del recuento.\")"
+    },
+    "A12": {
+     "content": "=_t(\"Precisión = líneas sin diferencia o dentro de 'Aprobar automáticamente hasta (%)' sobre líneas contadas. Los importes usan el costo guardado en la línea al validar.\")"
+    },
+    "A13": {
+     "content": "=_t(\"Pivotes 1 y 3: período elegido. Pivotes 2 y 4: el mismo filtro corrido un período hacia atrás, para las tarjetas. Pivotes 5 a 7: productos, motivos y ubicaciones ordenados por valor absoluto de la diferencia.\")"
+    },
+    "B2": {
+     "content": "=IFERROR(PIVOT.VALUE(1,\"count_id:count_distinct\")+0,0)"
+    },
+    "B3": {
+     "content": "=IFERROR(PIVOT.VALUE(1,\"__count\")+0,0)"
+    },
+    "B4": {
+     "content": "=IFERROR(PIVOT.VALUE(3,\"__count\",\"is_accurate\",TRUE)+0,0)"
+    },
+    "B5": {
+     "content": "=IFERROR(B4/B3,0)"
+    },
+    "B6": {
+     "content": "=IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"diff_type\",\"surplus\")+0,0)"
+    },
+    "B7": {
+     "content": "=IFERROR(PIVOT.VALUE(1,\"diff_value_abs\",\"diff_type\",\"shortage\")+0,0)"
+    },
+    "B8": {
+     "content": "=B6-B7"
+    },
+    "C2": {
+     "content": "=IFERROR(PIVOT.VALUE(2,\"count_id:count_distinct\")+0,0)"
+    },
+    "C3": {
+     "content": "=IFERROR(PIVOT.VALUE(2,\"__count\")+0,0)"
+    },
+    "C4": {
+     "content": "=IFERROR(PIVOT.VALUE(4,\"__count\",\"is_accurate\",TRUE)+0,0)"
+    },
+    "C5": {
+     "content": "=IFERROR(C4/C3,0)"
+    },
+    "C6": {
+     "content": "=IFERROR(PIVOT.VALUE(2,\"diff_value_abs\",\"diff_type\",\"surplus\")+0,0)"
+    },
+    "C7": {
+     "content": "=IFERROR(PIVOT.VALUE(2,\"diff_value_abs\",\"diff_type\",\"shortage\")+0,0)"
+    },
+    "C8": {
+     "content": "=C6-C7"
+    }
+   },
+   "styles": {
+    "A1:C1": 4,
+    "A10": 4,
+    "A11:A13": 5
+   },
+   "formats": {
+    "B2:C4": 4,
+    "B5:C5": 3,
+    "B6:C8": 1
+   },
+   "borders": {},
+   "areGridLinesVisible": true
+  }
+ ],
+ "styles": {
+  "1": {
+   "textColor": "#01666B",
+   "fontSize": 14,
+   "bold": true
+  },
+  "2": {
+   "textColor": "#666666",
+   "italic": true,
+   "wrapping": "wrap"
+  },
+  "4": {
+   "textColor": "#434343",
+   "bold": true
+  },
+  "5": {
+   "textColor": "#B3B3B3",
+   "fontSize": 9,
+   "wrapping": "wrap"
+  },
+  "6": {
+   "textColor": "#01666B",
+   "bold": true,
+   "fontSize": 16,
+   "verticalAlign": "middle"
+  },
+  "7": {
+   "textColor": "#434343",
+   "bold": true,
+   "fontSize": 11,
+   "verticalAlign": "middle"
+  },
+  "8": {
+   "textColor": "#01666B",
+   "verticalAlign": "middle"
+  },
+  "9": {
+   "textColor": "#434343",
+   "verticalAlign": "middle"
+  },
+  "10": {
+   "textColor": "#434343",
+   "bold": true,
+   "verticalAlign": "middle"
+  }
+ },
+ "formats": {
+  "1": "#,##0.00",
+  "2": "mmmm yyyy",
+  "3": "0.0%",
+  "4": "#,##0"
+ },
+ "borders": {
+  "1": {
+   "bottom": {
+    "style": "thin",
+    "color": "#CCCCCC"
+   }
+  }
+ },
+ "revisionId": "START_REVISION",
+ "uniqueFigureIds": true,
+ "settings": {
+  "locale": {
+   "name": "English (US)",
+   "code": "en_US",
+   "thousandsSeparator": ",",
+   "decimalSeparator": ".",
+   "dateFormat": "mm/dd/yyyy",
+   "timeFormat": "hh:mm:ss",
+   "formulaArgSeparator": ",",
+   "weekStart": 1
+  }
+ },
+ "pivots": {
+  "1": {
+   "type": "ODOO",
+   "id": "1",
+   "formulaId": "1",
+   "name": "Por mes y tipo de diferencia (período elegido)",
+   "model": "stock.count.line",
+   "domain": [
+    [
+     "count_state",
+     "=",
+     "done"
+    ],
+    [
+     "state",
+     "=",
+     "applied"
+    ]
+   ],
+   "context": {},
+   "measures": [
+    {
+     "id": "__count",
+     "fieldName": "__count",
+     "aggregator": "sum"
+    },
+    {
+     "id": "count_id:count_distinct",
+     "fieldName": "count_id",
+     "aggregator": "count_distinct"
+    },
+    {
+     "id": "diff_value_abs",
+     "fieldName": "diff_value_abs",
+     "aggregator": "sum"
+    }
+   ],
+   "columns": [
+    {
+     "fieldName": "diff_type"
+    }
+   ],
+   "rows": [
+    {
+     "fieldName": "count_date",
+     "granularity": "month"
+    }
+   ],
+   "sortedColumn": null,
+   "fieldMatching": {
+    "filter_periodo": {
+     "chain": "count_date",
+     "type": "datetime",
+     "offset": 0
+    },
+    "filter_deposito": {
+     "chain": "warehouse_id",
+     "type": "many2one"
+    },
+    "filter_categ": {
+     "chain": "categ_id",
+     "type": "many2one"
+    },
+    "filter_prod": {
+     "chain": "product_id",
+     "type": "many2one"
+    }
+   }
+  },
+  "2": {
+   "type": "ODOO",
+   "id": "2",
+   "formulaId": "2",
+   "name": "Por mes y tipo de diferencia (período anterior)",
+   "model": "stock.count.line",
+   "domain": [
+    [
+     "count_state",
+     "=",
+     "done"
+    ],
+    [
+     "state",
+     "=",
+     "applied"
+    ]
+   ],
+   "context": {},
+   "measures": [
+    {
+     "id": "__count",
+     "fieldName": "__count",
+     "aggregator": "sum"
+    },
+    {
+     "id": "count_id:count_distinct",
+     "fieldName": "count_id",
+     "aggregator": "count_distinct"
+    },
+    {
+     "id": "diff_value_abs",
+     "fieldName": "diff_value_abs",
+     "aggregator": "sum"
+    }
+   ],
+   "columns": [
+    {
+     "fieldName": "diff_type"
+    }
+   ],
+   "rows": [
+    {
+     "fieldName": "count_date",
+     "granularity": "month"
+    }
+   ],
+   "sortedColumn": null,
+   "fieldMatching": {
+    "filter_periodo": {
+     "chain": "count_date",
+     "type": "datetime",
+     "offset": -1
+    },
+    "filter_deposito": {
+     "chain": "warehouse_id",
+     "type": "many2one"
+    },
+    "filter_categ": {
+     "chain": "categ_id",
+     "type": "many2one"
+    },
+    "filter_prod": {
+     "chain": "product_id",
+     "type": "many2one"
+    }
+   }
+  },
+  "3": {
+   "type": "ODOO",
+   "id": "3",
+   "formulaId": "3",
+   "name": "Por mes y precisión (período elegido)",
+   "model": "stock.count.line",
+   "domain": [
+    [
+     "count_state",
+     "=",
+     "done"
+    ],
+    [
+     "state",
+     "=",
+     "applied"
+    ]
+   ],
+   "context": {},
+   "measures": [
+    {
+     "id": "__count",
+     "fieldName": "__count",
+     "aggregator": "sum"
+    }
+   ],
+   "columns": [
+    {
+     "fieldName": "is_accurate"
+    }
+   ],
+   "rows": [
+    {
+     "fieldName": "count_date",
+     "granularity": "month"
+    }
+   ],
+   "sortedColumn": null,
+   "fieldMatching": {
+    "filter_periodo": {
+     "chain": "count_date",
+     "type": "datetime",
+     "offset": 0
+    },
+    "filter_deposito": {
+     "chain": "warehouse_id",
+     "type": "many2one"
+    },
+    "filter_categ": {
+     "chain": "categ_id",
+     "type": "many2one"
+    },
+    "filter_prod": {
+     "chain": "product_id",
+     "type": "many2one"
+    }
+   }
+  },
+  "4": {
+   "type": "ODOO",
+   "id": "4",
+   "formulaId": "4",
+   "name": "Por mes y precisión (período anterior)",
+   "model": "stock.count.line",
+   "domain": [
+    [
+     "count_state",
+     "=",
+     "done"
+    ],
+    [
+     "state",
+     "=",
+     "applied"
+    ]
+   ],
+   "context": {},
+   "measures": [
+    {
+     "id": "__count",
+     "fieldName": "__count",
+     "aggregator": "sum"
+    }
+   ],
+   "columns": [
+    {
+     "fieldName": "is_accurate"
+    }
+   ],
+   "rows": [
+    {
+     "fieldName": "count_date",
+     "granularity": "month"
+    }
+   ],
+   "sortedColumn": null,
+   "fieldMatching": {
+    "filter_periodo": {
+     "chain": "count_date",
+     "type": "datetime",
+     "offset": -1
+    },
+    "filter_deposito": {
+     "chain": "warehouse_id",
+     "type": "many2one"
+    },
+    "filter_categ": {
+     "chain": "categ_id",
+     "type": "many2one"
+    },
+    "filter_prod": {
+     "chain": "product_id",
+     "type": "many2one"
+    }
+   }
+  },
+  "5": {
+   "type": "ODOO",
+   "id": "5",
+   "formulaId": "5",
+   "name": "Productos con mayor diferencia en valor",
+   "model": "stock.count.line",
+   "domain": [
+    [
+     "count_state",
+     "=",
+     "done"
+    ],
+    [
+     "state",
+     "=",
+     "applied"
+    ]
+   ],
+   "context": {},
+   "measures": [
+    {
+     "id": "__count",
+     "fieldName": "__count",
+     "aggregator": "sum"
+    },
+    {
+     "id": "qty_diff",
+     "fieldName": "qty_diff",
+     "aggregator": "sum"
+    },
+    {
+     "id": "diff_value_abs",
+     "fieldName": "diff_value_abs",
+     "aggregator": "sum"
+    }
+   ],
+   "columns": [
+    {
+     "fieldName": "diff_type"
+    }
+   ],
+   "rows": [
+    {
+     "fieldName": "product_id"
+    }
+   ],
+   "sortedColumn": {
+    "groupId": [
+     [],
+     []
+    ],
+    "measure": "diff_value_abs",
+    "order": "desc",
+    "originIndexes": [
+     0
+    ]
+   },
+   "fieldMatching": {
+    "filter_periodo": {
+     "chain": "count_date",
+     "type": "datetime",
+     "offset": 0
+    },
+    "filter_deposito": {
+     "chain": "warehouse_id",
+     "type": "many2one"
+    },
+    "filter_categ": {
+     "chain": "categ_id",
+     "type": "many2one"
+    },
+    "filter_prod": {
+     "chain": "product_id",
+     "type": "many2one"
+    }
+   }
+  },
+  "6": {
+   "type": "ODOO",
+   "id": "6",
+   "formulaId": "6",
+   "name": "Diferencias por motivo",
+   "model": "stock.count.line",
+   "domain": [
+    [
+     "count_state",
+     "=",
+     "done"
+    ],
+    [
+     "state",
+     "=",
+     "applied"
+    ],
+    [
+     "diff_type",
+     "!=",
+     "none"
+    ]
+   ],
+   "context": {},
+   "measures": [
+    {
+     "id": "__count",
+     "fieldName": "__count",
+     "aggregator": "sum"
+    },
+    {
+     "id": "diff_value_abs",
+     "fieldName": "diff_value_abs",
+     "aggregator": "sum"
+    }
+   ],
+   "columns": [
+    {
+     "fieldName": "diff_type"
+    }
+   ],
+   "rows": [
+    {
+     "fieldName": "reason_id"
+    }
+   ],
+   "sortedColumn": {
+    "groupId": [
+     [],
+     []
+    ],
+    "measure": "diff_value_abs",
+    "order": "desc",
+    "originIndexes": [
+     0
+    ]
+   },
+   "fieldMatching": {
+    "filter_periodo": {
+     "chain": "count_date",
+     "type": "datetime",
+     "offset": 0
+    },
+    "filter_deposito": {
+     "chain": "warehouse_id",
+     "type": "many2one"
+    },
+    "filter_categ": {
+     "chain": "categ_id",
+     "type": "many2one"
+    },
+    "filter_prod": {
+     "chain": "product_id",
+     "type": "many2one"
+    }
+   }
+  },
+  "7": {
+   "type": "ODOO",
+   "id": "7",
+   "formulaId": "7",
+   "name": "Ubicaciones con mayor diferencia en valor",
+   "model": "stock.count.line",
+   "domain": [
+    [
+     "count_state",
+     "=",
+     "done"
+    ],
+    [
+     "state",
+     "=",
+     "applied"
+    ]
+   ],
+   "context": {},
+   "measures": [
+    {
+     "id": "__count",
+     "fieldName": "__count",
+     "aggregator": "sum"
+    },
+    {
+     "id": "diff_value_abs",
+     "fieldName": "diff_value_abs",
+     "aggregator": "sum"
+    }
+   ],
+   "columns": [
+    {
+     "fieldName": "is_accurate"
+    }
+   ],
+   "rows": [
+    {
+     "fieldName": "location_id"
+    }
+   ],
+   "sortedColumn": {
+    "groupId": [
+     [],
+     []
+    ],
+    "measure": "diff_value_abs",
+    "order": "desc",
+    "originIndexes": [
+     0
+    ]
+   },
+   "fieldMatching": {
+    "filter_periodo": {
+     "chain": "count_date",
+     "type": "datetime",
+     "offset": 0
+    },
+    "filter_deposito": {
+     "chain": "warehouse_id",
+     "type": "many2one"
+    },
+    "filter_categ": {
+     "chain": "categ_id",
+     "type": "many2one"
+    },
+    "filter_prod": {
+     "chain": "product_id",
+     "type": "many2one"
+    }
+   }
+  }
+ },
+ "pivotNextId": 8,
+ "customTableStyles": {},
+ "odooVersion": 12,
+ "globalFilters": [
+  {
+   "id": "filter_periodo",
+   "type": "date",
+   "label": "Período",
+   "defaultValue": "this_year",
+   "rangeType": "fixedPeriod"
+  },
+  {
+   "id": "filter_deposito",
+   "type": "relation",
+   "label": "Depósito",
+   "modelName": "stock.warehouse",
+   "defaultValue": [],
+   "defaultValueDisplayNames": [],
+   "includeChildren": false
+  },
+  {
+   "id": "filter_categ",
+   "type": "relation",
+   "label": "Categoría de producto",
+   "modelName": "product.category",
+   "defaultValue": [],
+   "defaultValueDisplayNames": [],
+   "includeChildren": false
+  },
+  {
+   "id": "filter_prod",
+   "type": "relation",
+   "label": "Producto",
+   "modelName": "product.product",
+   "defaultValue": [],
+   "defaultValueDisplayNames": [],
+   "includeChildren": false
+  }
+ ],
+ "lists": {},
+ "listNextId": 1,
+ "chartOdooMenusReferences": {}
+}

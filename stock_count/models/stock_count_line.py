@@ -19,6 +19,9 @@ BLIND_FIELDS = (
     "qty_diff",
     "diff_pct",
     "diff_value",
+    "diff_value_abs",
+    "diff_type",
+    "is_accurate",
     "theoretical_breakdown",
 )
 # Conteo en embalajes: por cada etapa, (embalajes, sueltas, cantidad en la unidad base).
@@ -125,6 +128,28 @@ class StockCountLine(models.Model):
         currency_field="currency_id",
         help="Diferencia valorizada al costo del producto.",
     )
+    diff_value_abs = fields.Monetary(
+        string="Valor diferencia (absoluto)",
+        compute="_compute_diff",
+        store=True,
+        currency_field="currency_id",
+        help="Valor de la diferencia sin signo: sirve para ordenar y sumar sobrantes y "
+        "faltantes por separado.",
+    )
+    diff_type = fields.Selection(
+        [("none", "Sin diferencia"), ("surplus", "Sobrante"), ("shortage", "Faltante")],
+        string="Tipo de diferencia",
+        compute="_compute_diff",
+        store=True,
+        index=True,
+    )
+    is_accurate = fields.Boolean(
+        string="Dentro de tolerancia",
+        compute="_compute_is_accurate",
+        store=True,
+        help="Línea contada sin diferencia o con una diferencia dentro de la tolerancia de "
+        "aprobación. Es la base de la precisión.",
+    )
     currency_id = fields.Many2one(related="company_id.currency_id")
     count_units = fields.Json(
         string="Unidades de recuento (datos)",
@@ -228,11 +253,27 @@ class StockCountLine(models.Model):
                 line.qty_diff = 0.0
                 line.diff_pct = 0.0
                 line.diff_value = 0.0
+                line.diff_value_abs = 0.0
+                line.diff_type = False
                 continue
             diff = line.qty_final - line.qty_theoretical
             line.qty_diff = diff
             line.diff_pct = 100.0 * diff / line.qty_theoretical if line.qty_theoretical else 0.0
             line.diff_value = diff * line.unit_cost
+            line.diff_value_abs = abs(line.diff_value)
+            if line._is_diff_zero():
+                line.diff_type = "none"
+            else:
+                line.diff_type = "surplus" if diff > 0 else "shortage"
+
+    @api.depends("qty_diff", "diff_pct", "state", "count_id.auto_approve_tolerance_pct")
+    def _compute_is_accurate(self):
+        for line in self:
+            line.is_accurate = bool(
+                line.count_id
+                and line.state not in ("pending", "skipped")
+                and line.count_id._line_is_accurate(line)
+            )
 
     def _current_unit_cost(self):
         self.ensure_one()

@@ -10,7 +10,7 @@ genera los ajustes de inventario. Para Odoo Community y Enterprise.
 
 | Módulo | Qué hace | Requiere |
 |---|---|---|
-| [`stock_count`](stock_count/README.md) | Recuentos, app **Recuentos** para contar y supervisar, bloqueo de movimientos, reconteo, aprobación, validación y reportes | `stock`, `mail`, `barcodes` |
+| [`stock_count`](stock_count/README.md) | Recuentos, app **Recuentos** para contar y supervisar, bloqueo de movimientos, reconteo, aprobación, validación, reportes y tablero | `stock`, `mail`, `barcodes`, `spreadsheet_dashboard` |
 | [`stock_count_cycle`](stock_count_cycle/README.md) | Reglas de conteo cíclico que crean los recuentos y asignan la tarea al responsable | `stock_count` |
 | [`stock_count_barcode`](stock_count_barcode/README.md) | Tarjeta **Recuentos** dentro de la app Código de barras de Enterprise. Se instala solo | `stock_count`, `stock_barcode` |
 

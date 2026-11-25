@@ -2,12 +2,12 @@
     "name": "Recuento de inventario",
     "summary": "Recuentos físicos con conteo desde el celular, reconteo, aprobación "
     "y ajuste de inventario",
-    "version": "18.0.9.1.0",
+    "version": "18.0.9.2.0",
     "category": "Inventory/Inventory",
     "author": "aceleradora.la",
     "website": "https://github.com/aceleradora-la/odoo-stock-count",
     "license": "AGPL-3",
-    "depends": ["stock", "mail", "barcodes"],
+    "depends": ["stock", "mail", "barcodes", "spreadsheet_dashboard"],
     "external_dependencies": {"python": ["xlsxwriter"]},
     "post_init_hook": "_post_init_hook",
     "data": [
@@ -27,6 +27,7 @@
         "views/stock_quant_views.xml",
         "views/stock_location_views.xml",
         "views/stock_picking_type_views.xml",
+        "data/dashboards.xml",
         "views/stock_count_menus.xml",
     ],
     "assets": {

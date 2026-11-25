@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tablero "Recuentos" de la app Tableros. El archivo lo genera tools/gen_dashboard.py -->
+    <record id="dashboard_stock_count" model="spreadsheet.dashboard">
+        <field name="name">Recuentos</field>
+        <field name="spreadsheet_binary_data" type="base64" file="stock_count/data/files/stock_count_dashboard.json"/>
+        <field name="main_data_model_ids" eval="[(4, ref('stock_count.model_stock_count_line'))]"/>
+        <field name="dashboard_group_id" ref="spreadsheet_dashboard.spreadsheet_dashboard_group_logistics"/>
+        <field name="group_ids" eval="[Command.link(ref('stock_count.group_stock_count_manager'))]"/>
+        <field name="sequence">310</field>
+        <field name="is_published">True</field>
+    </record>
+</odoo>
