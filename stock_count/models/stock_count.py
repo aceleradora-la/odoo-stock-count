@@ -44,6 +44,15 @@ class StockCount(models.Model):
         check_company=True,
         default=lambda self: self._default_warehouse_id(),
     )
+    picking_type_id = fields.Many2one(
+        "stock.picking.type",
+        string="Tipo de operación",
+        compute="_compute_picking_type_id",
+        store=True,
+        index=True,
+        help="Tipo de operación Recuento del depósito: agrupa los recuentos en el tablero "
+        "de Inventario y etiqueta los ajustes que generan.",
+    )
     location_ids = fields.Many2many(
         "stock.location",
         "stock_count_location_rel",
@@ -263,6 +272,11 @@ class StockCount(models.Model):
             count.moved_count = moved
             count.has_recount = has_recount
             count.accuracy = 100.0 * (effective - inexact) / effective if effective else 0.0
+
+    @api.depends("warehouse_id.count_type_id")
+    def _compute_picking_type_id(self):
+        for count in self:
+            count.picking_type_id = count.warehouse_id.count_type_id
 
     def _compute_is_manager(self):
         is_manager = self.env.user.has_group("stock_count.group_stock_count_manager")

@@ -1,5 +1,6 @@
-from odoo import fields, models
+from odoo import api, fields, models
 from odoo.exceptions import UserError
+from odoo.osv import expression
 
 
 class StockMove(models.Model):
@@ -13,6 +14,14 @@ class StockMove(models.Model):
         readonly=True,
         help="Recuento que generó este ajuste de inventario.",
     )
+
+    def _should_be_assigned(self):
+        """Un ajuste de recuento lleva el tipo de operación Recuento, pero no va en una
+        transferencia."""
+        self.ensure_one()
+        if self.count_id:
+            return False
+        return super()._should_be_assigned()
 
     def _action_done(self, *args, **kwargs):
         """Bloqueo de movimientos sobre stock en recuento.
@@ -96,6 +105,25 @@ class StockMoveLine(models.Model):
         copy=False,
         readonly=True,
     )
+
+    @api.depends("move_id.count_id", "move_id.picking_type_id")
+    def _compute_picking_type_id(self):
+        """Los ajustes de un recuento no tienen transferencia: toman el tipo del movimiento."""
+        super()._compute_picking_type_id()
+        for line in self:
+            if not line.picking_id and line.move_id.count_id:
+                line.picking_type_id = line.move_id.picking_type_id
+
+    def _search_picking_type_id(self, operator, value):
+        domain = super()._search_picking_type_id(operator, value)
+        if operator in expression.NEGATIVE_TERM_OPERATORS:
+            return domain
+        return expression.OR(
+            [
+                domain,
+                [("move_id.count_id", "!=", False), ("move_id.picking_type_id", operator, value)],
+            ]
+        )
 
     def _get_stock_count_conflicts(self):
         """Devuelve (bloqueadas, avisadas): pares (move line, línea de recuento) cuya

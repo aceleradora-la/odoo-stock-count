@@ -350,3 +350,37 @@ class TestStockCountLock(TransactionCase):
         blocked = self._delivery(self.paint, 1.0, lot=self.lot_a)
         with self.assertRaises(UserError):
             blocked.button_validate()
+
+    # ------------------------------------------------------------------
+    # Tipo de operación Recuento
+    # ------------------------------------------------------------------
+    def test_count_operation_type(self):
+        count_type = self.warehouse.count_type_id
+        self.assertTrue(count_type, "cada depósito tiene su tipo de operación Recuento")
+        self.assertEqual(count_type.code, "stock_count")
+        count = self._create_count(
+            scope="products",
+            product_ids=[(6, 0, self.screw.ids)],
+            auto_approve_tolerance_pct=5.0,
+        )
+        self.assertEqual(count.picking_type_id, count_type)
+        self.assertEqual(count_type.count_stock_count_draft, 1)
+        count.action_confirm()
+        count_type.invalidate_recordset()
+        self.assertEqual(count_type.count_stock_count_to_count, 1)
+        action = count_type.get_stock_count_action()
+        self.assertEqual(self.Count.search(action["domain"]), count)
+
+        count.line_ids.write({"qty_counted": 97.0})  # −3 %: se aprueba y valida solo
+        self.assertEqual(count.state, "done")
+        move = count.move_ids
+        self.assertEqual(move.picking_type_id, count_type)
+        self.assertFalse(move.picking_id, "el ajuste no va en una transferencia")
+        self.assertEqual(move.move_line_ids.picking_type_id, count_type)
+        found = self.env["stock.move.line"].search([("picking_type_id", "=", count_type.id)])
+        self.assertEqual(found, move.move_line_ids)
+        count_type.invalidate_recordset()
+        self.assertEqual(count_type.count_stock_count_to_count, 0)
+
+        new_warehouse = self.env["stock.warehouse"].create({"name": "Depósito Sur", "code": "SUR"})
+        self.assertEqual(new_warehouse.count_type_id.code, "stock_count")

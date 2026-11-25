@@ -9,6 +9,7 @@
     "license": "AGPL-3",
     "depends": ["stock", "mail", "barcodes"],
     "external_dependencies": {"python": ["xlsxwriter"]},
+    "post_init_hook": "_post_init_hook",
     "data": [
         "security/stock_count_security.xml",
         "security/ir.model.access.csv",
@@ -25,6 +26,7 @@
         "views/res_config_settings_views.xml",
         "views/stock_quant_views.xml",
         "views/stock_location_views.xml",
+        "views/stock_picking_type_views.xml",
         "views/stock_count_menus.xml",
     ],
     "assets": {
