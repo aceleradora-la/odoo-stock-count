@@ -21,18 +21,16 @@ class TestStockCountPacks(Phase3Common, TransactionCase):
 
     @classmethod
     def _make_pack(cls, product, name, qty, barcode=None, default=False):
-        """Embalaje de un producto. Odoo 19: una unidad de medida entre sus Embalajes."""
-        pack = cls.env["uom.uom"].create(
-            {"name": name, "relative_factor": qty, "relative_uom_id": product.uom_id.id}
+        """Embalaje de un producto. Odoo 18: un product.packaging marcado para recuento."""
+        return cls.env["product.packaging"].create(
+            {
+                "name": name,
+                "product_id": product.id,
+                "qty": qty,
+                "barcode": barcode or False,
+                "stock_count_default": default,
+            }
         )
-        product.product_tmpl_id.uom_ids = [(4, pack.id)]
-        if default:
-            product.product_tmpl_id.stock_count_pack_id = pack
-        if barcode:
-            cls.env["product.uom"].create(
-                {"uom_id": pack.id, "product_id": product.id, "barcode": barcode}
-            )
-        return pack
 
     def _count(self, products=None, **vals):
         products = products or self.egg

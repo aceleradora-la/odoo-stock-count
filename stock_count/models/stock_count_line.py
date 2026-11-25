@@ -1,6 +1,5 @@
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError
-from odoo.fields import Domain
 from odoo.tools import float_compare, float_is_zero, float_round
 
 LINE_STATES = [
@@ -128,7 +127,7 @@ class StockCountLine(models.Model):
     )
     currency_id = fields.Many2one(related="company_id.currency_id")
     count_pack_id = fields.Many2one(
-        "uom.uom",
+        "product.packaging",
         string="Unidad de recuento",
         readonly=True,
         copy=False,
