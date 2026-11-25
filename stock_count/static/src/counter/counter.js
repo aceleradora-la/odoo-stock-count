@@ -265,7 +265,7 @@ export class StockCountCounter extends Component {
 
     /** Llegó la versión del servidor de una línea: reemplaza a la de pantalla. */
     setServerLine(updated) {
-        const { serial_already, recount_requested, ...line } = updated;
+        const { serial_already, recount_requested, count_started, ...line } = updated;
         this.serverLines.set(line.id, line);
         this._replaceLine(this.withQueue(copy(line)));
     }
@@ -363,6 +363,10 @@ export class StockCountCounter extends Component {
             await this.dropOp(op);
             this.setServerLine(updated);
             changed = true;
+            if (updated.count_started) {
+                // El conteo recién se inició: el servidor actualizó las líneas.
+                this.needsReload = true;
+            }
             if (updated.serial_already) {
                 this.warn(_t("%s: ese número de serie ya estaba contado.", updated.product_name));
             }

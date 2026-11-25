@@ -14,8 +14,9 @@ class StockLocation(models.Model):
         string="Precisión de recuentos (%)",
         compute="_compute_stock_count_stats",
         digits=(16, 2),
-        help="Promedio de precisión (líneas sin diferencia sobre líneas contadas) de los "
-        "últimos cinco recuentos validados que incluyeron esta ubicación.",
+        help="Promedio de precisión (líneas sin diferencia o dentro de la tolerancia de "
+        "aprobación, sobre líneas contadas) de los últimos cinco recuentos validados que "
+        "incluyeron esta ubicación.",
     )
 
     def _compute_stock_count_stats(self):
@@ -35,7 +36,11 @@ class StockLocation(models.Model):
                     lambda line, count=count: line.count_id == count and line.state == "applied"
                 )
                 if count_lines:
-                    ok = len(count_lines.filtered(lambda line: line._is_diff_zero()))
+                    ok = len(
+                        count_lines.filtered(
+                            lambda line, count=count: count._line_is_accurate(line)
+                        )
+                    )
                     accuracies.append(100.0 * ok / len(count_lines))
             location.stock_count_accuracy = (
                 sum(accuracies) / len(accuracies) if accuracies else 0.0
