@@ -78,6 +78,34 @@ Los ajustes generados por el propio recuento llevan `count_id` y pasan el bloque
 Lo que viene: retroport a 18.0 y 17.0, puente con Código de barras de Enterprise (fase 6)
 y reglas de conteo cíclico que crean recuentos solos y asignan la tarea (fase 7).
 
+### Conteo en embalajes
+
+Un producto puede contarse en un embalaje (caja, pack, bobina) en lugar de su unidad de
+medida. El contador carga **embalajes + sueltas** y el recuento sigue trabajando en la
+unidad base: diferencias, tolerancias, bloqueo y ajustes no cambian.
+
+- **Configuración.** Odoo 19: campo *Unidad de recuento* en la pestaña Inventario del
+  producto, entre sus Embalajes. Odoo 18: columna *Recuento* en la lista de embalajes del
+  producto, uno por producto. Sin configurar, se cuenta en la unidad de medida.
+- **Snapshot.** Al confirmar, cada línea guarda su unidad de recuento y el factor.
+- **App.** Dos casilleros por renglón y el total en la unidad base. El contador puede
+  cambiar la unidad del renglón entre la unidad del producto y sus embalajes; lo ya
+  cargado se conserva. El segundo conteo tiene sus propios casilleros.
+- **Escaneo.** El código de barras de un embalaje suma un embalaje; el del producto, una
+  unidad.
+- **Reportes.** Hoja de conteo, informe de diferencias, Excel y listas muestran el
+  desglose. El desglose del teórico queda oculto en conteo ciego.
+
+### Reglas de seguridad de la carga
+
+- Un producto escaneado se cuenta solo en la ubicación abierta. Si ahí no se lo esperaba,
+  la app ofrece agregarlo como producto no esperado.
+- *Terminar conteo* no cierra en cero las líneas sin asignar de ubicaciones donde el
+  contador no contó nada, y lo cerrado en cero nunca se aprueba solo.
+- Un número de serie vale 0 o 1; escanearlo dos veces no suma.
+- El valor de la diferencia usa el costo guardado en la línea, congelado al validar.
+- *No recontar si el valor es menor a*: materialidad para no recontar diferencias baratas.
+
 ## Notas de compatibilidad 19.0
 
 Verificado sobre `odoo/odoo` rama 19.0 (`addons/stock/models/stock_quant.py`):
