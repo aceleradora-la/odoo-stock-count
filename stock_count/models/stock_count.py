@@ -922,6 +922,9 @@ class StockCount(models.Model):
             (self.env._("Comentario"), 30),
             (self.env._("Movido durante el conteo"), 12),
             (self.env._("Estado"), 12),
+            (self.env._("Unidad de recuento"), 18),
+            (self.env._("Contado en embalajes"), 24),
+            (self.env._("Teórico en embalajes"), 24),
         ]
         row = 8
         for col, (title, width) in enumerate(columns):
@@ -951,6 +954,9 @@ class StockCount(models.Model):
                 (line.note or "", None),
                 (self.env._("Sí") if line.moved_during_count else "", None),
                 (states.get(line.state, line.state), None),
+                (line.count_pack_id.display_name or "", None),
+                (line.counted_breakdown or "", None),
+                (line.theoretical_breakdown or "", None),
             ]
             for col, (value, fmt) in enumerate(values):
                 if fmt is not None and value != "":

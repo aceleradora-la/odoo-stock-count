@@ -63,7 +63,12 @@
                                             <td><span t-out="line.product_id.name"/></td>
                                             <td><span t-out="line.lot_id.name or ''"/></td>
                                             <td><span t-out="line.product_uom_id.name"/></td>
-                                            <td class="text-center" style="border:1px solid #999; height:28px"></td>
+                                            <td style="border:1px solid #999; height:28px; vertical-align:bottom">
+                                                <div t-if="line.count_pack_id" class="d-flex justify-content-between" style="font-size:8px; color:#555">
+                                                    <span t-out="line.count_pack_id.display_name"/>
+                                                    <span>+ sueltas</span>
+                                                </div>
+                                            </td>
                                             <td></td>
                                         </tr>
                                     </tbody>
@@ -146,7 +151,10 @@
                                 <tr t-foreach="data['with_diff']" t-as="line">
                                     <td><span t-out="line.location_id.complete_name"/></td>
                                     <td><span t-out="line.product_id.display_name"/>
-                                        <span t-if="line.moved_during_count" class="badge text-bg-warning ms-1">movido</span></td>
+                                        <span t-if="line.moved_during_count" class="badge text-bg-warning ms-1">movido</span>
+                                        <div t-if="line.count_pack_id" class="small text-muted">
+                                            Contado: <span t-out="line.counted_breakdown"/> · Teórico: <span t-out="line.theoretical_breakdown"/>
+                                        </div></td>
                                     <td><span t-out="line.lot_id.name or ''"/></td>
                                     <td class="text-end"><span t-out="line.qty_theoretical"/></td>
                                     <td class="text-end"><span t-out="line.qty_counted"/></td>
