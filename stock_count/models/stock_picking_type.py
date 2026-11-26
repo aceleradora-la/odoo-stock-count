@@ -99,8 +99,29 @@ class StockWarehouse(models.Model):
         return data
 
     def _stock_count_create_missing_types(self):
-        """Crea el tipo de operación Recuento en los depósitos que no lo tienen."""
+        """Crea el tipo de operación Recuento en los depósitos que no lo tienen.
+
+        No usa _create_or_update_sequences_and_picking_types: ese método, además de
+        crear lo que falta, reescribe los tipos que ya existen con los valores de
+        fábrica (ubicaciones por defecto, activo), y pisa lo que haya configurado
+        el usuario en Recepciones, Manufactura, etc.
+        """
+        PickingType = self.env["stock.picking.type"]
+        IrSequenceSudo = self.env["ir.sequence"].sudo()
         for warehouse in self.filtered(lambda warehouse: not warehouse.count_type_id):
-            values = warehouse._create_or_update_sequences_and_picking_types()
-            if values:
-                warehouse.write(values)
+            max_sequence = PickingType.with_context(active_test=False).search(
+                [("sequence", "!=", False)], order="sequence desc", limit=1
+            ).sequence
+            create_data, _next = warehouse._get_picking_type_create_values(max_sequence)
+            values = dict(
+                create_data["count_type_id"],
+                **warehouse._get_picking_type_update_values()["count_type_id"],
+            )
+            sequence = IrSequenceSudo.create(
+                warehouse._get_sequence_values()["count_type_id"]
+            )
+            color = (warehouse.in_type_id or warehouse.int_type_id).color
+            values.update(
+                warehouse_id=warehouse.id, color=color, sequence_id=sequence.id
+            )
+            warehouse.count_type_id = PickingType.create(values)

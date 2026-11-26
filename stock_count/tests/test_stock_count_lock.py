@@ -384,3 +384,24 @@ class TestStockCountLock(TransactionCase):
 
         new_warehouse = self.env["stock.warehouse"].create({"name": "Depósito Sur", "code": "SUR"})
         self.assertEqual(new_warehouse.count_type_id.code, "stock_count")
+
+    def test_missing_count_type_keeps_other_types(self):
+        """Crear el tipo Recuento que falta no pisa los demás tipos del depósito."""
+        warehouse = self.warehouse
+        shelf = self.env["stock.location"].create(
+            {"name": "Estante propio", "usage": "internal", "location_id": warehouse.lot_stock_id.id}
+        )
+        in_type = warehouse.in_type_id
+        in_type.default_location_dest_id = shelf
+        int_type = warehouse.int_type_id
+        int_type.active = False
+        warehouse.count_type_id.active = False
+        warehouse.count_type_id = False
+
+        warehouse._stock_count_create_missing_types()
+
+        self.assertEqual(warehouse.count_type_id.code, "stock_count")
+        self.assertEqual(warehouse.count_type_id.warehouse_id, warehouse)
+        self.assertTrue(warehouse.count_type_id.sequence_id)
+        self.assertEqual(in_type.default_location_dest_id, shelf)
+        self.assertFalse(int_type.active)
